@@ -1,0 +1,2658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>RFS Tool</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%3E%3Cdefs%3E%3ClinearGradient%20id='g'%20x1='0'%20y1='0'%20x2='1'%20y2='0'%3E%3Cstop%20offset='0'%20stop-color='%232ecfbd'/%3E%3Cstop%20offset='1'%20stop-color='%2388acff'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect%20width='32'%20height='32'%20rx='7'%20fill='%23080e1b'/%3E%3Crect%20x='.75'%20y='.75'%20width='30.5'%20height='30.5'%20rx='6.25'%20fill='none'%20stroke='%23283750'%20stroke-width='1.5'/%3E%3Cpath%20d='M4%2016%20C%208%205,%2012%205,%2016%2016%20S%2024%2027,%2028%2016'%20fill='none'%20stroke='url(%23g)'%20stroke-width='3.2'%20stroke-linecap='round'/%3E%3C/svg%3E">
+  <style>
+    :root { --bg:#080e1b; --line:#283750; --line2:#1c2c43; --ink:#edf4ff; --muted:#96a7be; --soft:#657c9a; --aqua:#69e8d9; --sky:#88acff; --amber:#f8c57d; --red:#ff8c9e; --green:#79e4b9; --control-border:#344867; --control-bg:#0e192c; --radius:16px; --on-accent:#09203a; --grad:linear-gradient(135deg,#7ceee1,#83b6f8); --grad-hover:linear-gradient(135deg,#a0fff1,#a1cbff); }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;overflow:hidden;min-width:1220px;font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink);background:radial-gradient(ellipse 800px 480px at 88% -10%,rgba(97,124,247,.16),transparent 68%),radial-gradient(ellipse 720px 370px at -10% 3%,rgba(46,207,189,.10),transparent 65%),var(--bg);line-height:1.3}
+    body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.17;background-image:linear-gradient(rgba(134,168,219,.09) 1px,transparent 1px),linear-gradient(90deg,rgba(134,168,219,.09) 1px,transparent 1px);background-size:54px 54px;mask-image:linear-gradient(to bottom,#000,transparent 60%)}
+    button{font:inherit;cursor:pointer} button:focus-visible,summary:focus-visible{outline:3px solid var(--aqua);outline-offset:2px}
+    button:disabled{opacity:.45;cursor:not-allowed;transform:none!important}
+    .shell{height:100vh;padding:12px;display:grid;grid-template-rows:auto minmax(0,1fr);gap:10px}
+    .surface{border:1px solid rgba(104,134,176,.23);border-radius:var(--radius);background:linear-gradient(145deg,rgba(22,35,57,.96),rgba(13,24,41,.97));box-shadow:0 12px 52px rgba(0,0,0,.14)}
+    .topbar{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:10px 12px}
+    .menu-btn,.connect-btn,.adjust-action-btn,#settingsPage .action-btn{border:1px solid #354965;border-radius:10px;background:rgba(28,43,67,.86);color:#dce9fa;transition:background .2s,border-color .2s,transform .2s}
+    .menu-btn,.connect-btn{height:34px;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:0 12px;font-size:12px;font-weight:700}
+    .menu-btn{width:38px;padding:0}
+    .menu-btn:hover:not(:disabled),.adjust-action-btn:hover,#settingsPage .action-btn:hover{background:#233855;border-color:#58708d;transform:translateY(-1px)}
+    .connect-btn,.adjust-action-btn.apply,#settingsPage .action-btn.primary{background:var(--grad);border-color:transparent;color:var(--on-accent);box-shadow:0 6px 26px rgba(87,222,213,.15)}
+    .adjust-action-btn.apply:hover,#settingsPage .action-btn.primary:hover{background:var(--grad-hover)}
+    .connect-btn.connected{background:rgba(121,228,185,.13);border-color:rgba(121,228,185,.40);color:var(--green);box-shadow:none;opacity:1}
+    .topbar-actions{display:flex;align-items:center;justify-content:flex-end;gap:12px}
+    .title{font-size:19px;font-weight:760;letter-spacing:-.04em;color:var(--aqua)}
+    .notice{display:none;padding:8px 12px;border:1px solid rgba(248,197,125,.38);background:rgba(248,197,125,.08);color:#f2dcb8;border-radius:12px;font-size:12px}
+    .notice.visible{display:block;position:fixed;top:65px;left:12px;right:12px;z-index:10}
+    .dashboard{display:grid;grid-template-columns:1fr 1fr 1.25fr;gap:10px;min-height:0}
+    .column{display:grid;gap:10px;min-height:0}
+    .column.left{grid-template-rows:auto 1fr}
+    /* Frequencies and Heater current each fill half of their column's available height. */
+    .column.mid,.column.right{grid-template-rows:minmax(0,1fr) minmax(0,1fr)}
+    .panel{padding:12px;min-height:0;overflow:hidden;display:flex;flex-direction:column}
+    .block-title,.graph-title .name{font-size:16px;font-weight:760;letter-spacing:-.03em}
+    .block-title{margin-bottom:2px}
+    .block-rule,.adjust-rule,#settingsPage .page-rule,.about-rule{height:1px;background:linear-gradient(90deg,var(--sky),transparent);opacity:.55}
+    .block-rule{margin-bottom:8px}
+    .rows{display:grid;gap:0}
+    .row{display:grid;grid-template-columns:minmax(130px,1fr) minmax(0,1.35fr);gap:14px;padding:5px 0;border-bottom:1px solid var(--line2);align-items:center}
+    .row:last-child{border-bottom:0}
+    .label{color:var(--muted);font-size:12px}
+    .value{text-align:right;font-size:12px;font-weight:650;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+    .row.big .label{font-size:14px;color:#d9e9fb;font-weight:720}
+    .row.big .value{font-size:17px;color:#ecfbff}
+    .dashboard .value.live-value{color:var(--green)}
+    .text-table{margin-top:14px;border:1px solid var(--line2);border-radius:10px;overflow:auto}
+    /* Table defaults belong to Dashboard, Log and the Settings calibration grid.
+       :where() keeps the original specificity so each table can override them. */
+    :where(.text-table,.command-table,.calibration-scroll) table{border-collapse:collapse;width:100%;min-width:250px;text-align:left;font-size:11px}
+    :where(.text-table,.command-table,.calibration-scroll) thead{background:rgba(80,111,155,.14)}
+    :where(.text-table,.command-table,.calibration-scroll) th{font-size:9px;letter-spacing:.085em;text-transform:uppercase;color:var(--muted);font-weight:740;text-align:left;padding:8px 9px}
+    :where(.text-table,.command-table,.calibration-scroll) td{padding:7px 9px;border-top:1px solid var(--line2);font-variant-numeric:tabular-nums;color:#d4e4f5}
+    :where(.text-table,.command-table,.calibration-scroll) :is(th,td):last-child{text-align:right}
+    :where(.text-table,.command-table,.calibration-scroll) td:first-child{color:var(--soft);width:48px}
+    .empty-row td{color:var(--soft);padding:18px 9px;text-align:center}
+    .user .row{grid-template-columns:110px minmax(0,1fr)}
+    .user .value{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-weight:590;font-size:11px;white-space:pre-wrap}
+    .graph-title{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;margin-bottom:2px}
+    .graph-meta{font-size:11px;color:var(--muted);margin-top:-2px;margin-bottom:8px}
+    .chart-container{position:relative;min-height:0;flex:1}
+    .chart-container svg{width:100%;height:100%;display:block;overflow:visible}
+    .chart-empty{display:grid;place-items:center;height:100%;color:var(--soft);font-size:12px;text-align:center}
+    .menu-panel{position:fixed;left:12px;top:60px;width:280px;height:auto;max-height:calc(100vh - 72px);z-index:30;transform:translateX(calc(-100% - 24px));opacity:0;visibility:hidden;transition:transform .2s ease,opacity .2s ease,width .2s ease,visibility .2s;overflow:hidden}
+    .menu-panel.open{transform:translateX(0);opacity:1;visibility:visible}
+    .drawer-nav{padding:13px}
+    .drawer-head{font-size:13px;font-weight:760;padding:1px 4px 12px;border-bottom:1px solid var(--line2);margin-bottom:9px}
+    .menu-item{width:100%;display:flex;align-items:center;justify-content:space-between;text-align:left;font-size:13px;font-weight:650;color:var(--ink);background:rgba(43,66,100,.34);border:1px solid var(--line);border-radius:10px;padding:12px;min-height:42px}
+    .menu-item:hover{background:rgba(105,232,217,.10);border-color:rgba(105,232,217,.38);color:var(--aqua)}
+    .menu-item .chevron{font-size:20px;line-height:1;color:var(--aqua)}
+    /* The Log page owns scrolling, not the history table/card. */
+    .log-page{min-height:0;min-width:0;overflow:auto;padding:12px 0 14px;scrollbar-color:var(--line) transparent}
+    .log-inner{width:min(1120px,100%);min-width:740px;margin:0 auto}
+    .log-card{min-width:0}
+    .command-table{border:1px solid var(--line2);border-radius:10px;min-width:0}
+    .command-table table{min-width:740px;table-layout:fixed}
+    .command-table :is(th,td):last-child{text-align:left}
+    .command-table :is(th,td):nth-child(1){width:91px}
+    .command-table :is(th,td):nth-child(2){width:75px}
+    .command-table :is(th,td):nth-child(3){width:175px}
+    .command-table :is(th,td):nth-child(4){width:94px}
+    .command-table td{vertical-align:top}
+    .command-table td:nth-child(2){color:#d4e4f5}
+    .command-table tr.getter td:nth-child(3){color:var(--green)}
+    .command-table tr.setter td:nth-child(3){color:var(--sky)}
+    .command-table td:nth-child(5){font:10px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;overflow-wrap:anywhere;white-space:normal}
+    .command-table .packet-response{margin-top:3px;color:var(--green)}
+    .command-table .packet-error{margin-top:3px;color:var(--red)}
+    .pill{display:inline-flex;align-items:center;gap:5px;border-radius:6px;padding:2px 6px;font-size:10px;font-weight:720;background:rgba(121,228,185,.09);color:var(--green)}
+    .pill.error{color:var(--red);background:rgba(255,140,158,.10)}
+    .backdrop{position:fixed;inset:0;background:rgba(0,0,0,.34);backdrop-filter:blur(2px);opacity:0;pointer-events:none;transition:opacity .2s;z-index:20}
+    .backdrop.open{opacity:1;pointer-events:auto}
+    .toaster{position:fixed;right:18px;bottom:18px;max-width:min(420px,calc(100vw - 36px));padding:11px 14px;background:#213750;border:1px solid #405d79;border-radius:12px;color:#e9f6ff;box-shadow:0 14px 50px #0008;font-size:12px;z-index:50;opacity:0;transform:translateY(15px);pointer-events:none;transition:opacity .2s,transform .2s}
+    .toaster.visible{opacity:1;transform:translateY(0)}
+    @media (max-width: 1340px) { body{overflow:auto;min-width:0} .shell{height:auto} .dashboard{grid-template-columns:1fr} .column{grid-template-rows:auto!important} .log-page{height:calc(100vh - 90px);min-height:360px} }
+    @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+    .adjust-head,#settingsPage .page-head{display:flex;justify-content:space-between}
+    .adjust-head{align-items:baseline;margin:0 0 15px;padding:0 4px}
+    h1{font-size:23px;font-weight:760;letter-spacing:-.045em;margin:0}
+    .adjust-rule{margin:11px 0 22px}
+    .form-layout{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .field-card,#settingsPage .section-card{padding:23px 25px;min-width:0}
+    .field-label{display:block;color:var(--muted);font-size:13px;font-weight:650;margin-bottom:14px}
+    .frequency-selector{
+      display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;
+      width:100%;height:58px;padding:5px;border:1px solid var(--control-border);border-radius:12px;
+      background:var(--control-bg);
+    }
+    .frequency-choice,#settingsPage .source-choice{min-width:0;border:1px solid transparent;border-radius:8px;color:var(--muted);background:transparent;font-weight:700;transition:background .15s,border-color .15s,color .15s}
+    .frequency-choice{font-size:13px;font-variant-numeric:tabular-nums}
+    .frequency-choice:hover,#settingsPage .source-choice:hover{background:rgba(136,172,255,.10);color:var(--ink)}
+    .frequency-choice.selected,#settingsPage .source-choice.selected{color:var(--on-accent);background:var(--grad);box-shadow:0 2px 14px rgba(105,232,217,.12)}
+    .current-value{
+      height:58px;display:flex;align-items:center;gap:9px;white-space:nowrap;
+      padding:0 18px;color:#dce8f7;background:rgba(11,20,35,.62);
+      border:1px solid var(--line);border-radius:12px;
+      font:650 clamp(16px,2vw,21px)/1 ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;
+      letter-spacing:.035em;font-variant-numeric:tabular-nums
+    }
+    .adjust-card{grid-column:1/-1;padding:28px 30px 26px}
+    .adjust-heading,#settingsPage .calibration-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .adjust-heading{margin-bottom:22px}
+    .adjust-heading .field-label{font-size:16px;color:#e5f0ff;margin:0;font-weight:730;letter-spacing:-.02em}
+    .offset-ruler{position:relative;margin:0 4px 22px;padding-top:30px;font-variant-numeric:tabular-nums}
+    .offset-ruler-track{position:relative;height:10px;border-radius:9px;border:1px solid #354b68;
+      background:repeating-linear-gradient(90deg,transparent 0,transparent calc(10% - 1px),rgba(136,172,255,.34) calc(10% - 1px),rgba(136,172,255,.34) 10%),
+                 linear-gradient(90deg,rgba(136,172,255,.20),rgba(105,232,217,.21) 50%,rgba(136,172,255,.20));}
+    .offset-ruler-center{position:absolute;left:50%;top:-5px;height:18px;width:2px;border-radius:2px;background:#88acff;transform:translateX(-50%)}
+    .offset-ruler-current{position:absolute;top:0;left:50%;height:41px;z-index:2;transform:translateX(-50%);pointer-events:none}
+    .offset-ruler-current[hidden]{display:none}
+    .offset-ruler-tag{position:absolute;bottom:18px;left:0;transform:translateX(-50%);font-size:11px;white-space:nowrap;
+      border:1px solid rgba(248,197,125,.4);border-radius:6px;padding:3px 7px;background:#263346;color:var(--amber);font-weight:700}
+    .offset-ruler-pointer{position:absolute;top:17px;left:-1px;height:24px;width:2px;border-radius:2px;background:var(--amber);
+      box-shadow:0 0 0 2px rgba(248,197,125,.12)}
+    .offset-ruler-current.near-min .offset-ruler-tag{transform:translateX(0)}
+    .offset-ruler-current.near-max .offset-ruler-tag{transform:translateX(-100%)}
+    .offset-ruler-labels{display:flex;justify-content:space-between;align-items:center;margin-top:8px;
+      color:var(--muted);font-size:11px;font-weight:650}
+    .frequency-input{
+      display:flex;align-items:center;justify-content:center;gap:8px;
+      width:100%;margin:0 auto;
+      min-height:105px;border-radius:15px;
+      border:1px solid rgba(105,232,217,.27);
+      background:linear-gradient(140deg,rgba(18,37,54,.93),rgba(12,23,41,.96));
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.035),0 0 40px rgba(105,232,217,.04);
+      padding:14px 17px;
+      font-variant-numeric:tabular-nums;
+    }
+    .sign-toggle{
+      flex:none;align-self:stretch;min-width:34px;border:0;border-radius:9px;
+      color:var(--aqua);background:transparent;
+      font:720 clamp(21px,2.4vw,31px)/1 ui-monospace,SFMono-Regular,Consolas,monospace;
+    }
+    .sign-toggle:hover,.sign-toggle:focus-visible{background:rgba(105,232,217,.09)}
+    .digit-group{
+      flex:1 1 0;min-width:0;height:68px;display:flex;align-items:center;justify-content:center;
+      text-align:center;border:1px solid transparent;border-radius:10px;
+      background:transparent;color:#eefbff;cursor:ns-resize;user-select:none;
+      font:750 clamp(21px,2.5vw,34px)/1 ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;
+      letter-spacing:-.07em;font-variant-numeric:tabular-nums;
+      padding:0 3px;
+      transition:background .15s,border-color .15s;
+    }
+    .digit-group:hover,.digit-group.wheeling{
+      background:rgba(105,232,217,.10);border-color:rgba(105,232,217,.46);
+      box-shadow:inset 0 0 0 1px rgba(105,232,217,.10)
+    }
+    .point{
+      flex:none;color:var(--aqua);font:700 clamp(27px,3vw,38px)/1 ui-monospace,SFMono-Regular,Consolas,monospace;
+      transform:translateY(6px)
+    }
+    .adjust-unit{flex:none;color:var(--aqua);font-size:17px;font-weight:700;margin-left:6px;align-self:center}
+    .input-hint{display:flex;justify-content:center;gap:9px;margin-top:12px;color:var(--soft);font-size:12px}
+    .details-card{grid-column:1/-1;overflow:hidden}
+    .details-card summary{
+      display:flex;align-items:center;justify-content:space-between;cursor:pointer;
+      list-style:none;padding:15px 20px;color:#e5f0ff;font-size:13px;font-weight:720;
+    }
+    .details-card summary::-webkit-details-marker{display:none}
+    .details-card summary::after{content:"+";font-size:21px;font-weight:400;color:var(--aqua)}
+    .details-card[open] summary::after{content:"−"}
+    .detail-list{padding:0 20px 16px;display:grid;gap:0}
+    .detail-row{display:grid;grid-template-columns:1fr 1.4fr;gap:12px;padding:9px 0;border-top:1px solid var(--line2);font-size:12px}
+    .detail-row .detail-name{color:var(--muted)}
+    .detail-row .detail-value{color:var(--ink);font-variant-numeric:tabular-nums;overflow-wrap:anywhere;text-align:right}
+    .detail-row .detail-value.accent{color:var(--aqua);font-weight:700}
+    .detail-note{font-size:11px;color:var(--soft);padding-top:10px;line-height:1.5}
+    .adjust-actions,#settingsPage .toggle-combo{display:flex;align-items:center;justify-content:flex-end;gap:11px}
+    .adjust-actions{padding-top:3px}
+    .adjust-action-btn.reset{margin-right:auto}
+    .adjust-action-btn{height:44px;min-width:133px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:730}
+
+    .dashboard[hidden],.adjust-page[hidden],.about-page[hidden],.log-page[hidden],.settings-page[hidden]{display:none!important}
+    /* About floats over the previous screen (kept rendered, inert) using the same dim and blur as .backdrop. */
+    .about-page{position:fixed;inset:0;z-index:15;background:rgba(0,0,0,.34);backdrop-filter:blur(2px);min-height:0;overflow:auto;display:flex;align-items:center;justify-content:center;padding:20px}
+    .topbar{position:relative;z-index:25} /* above .backdrop (20) and About (15), below the menu panel (30) */
+    .about-card{width:min(690px,100%);padding:28px 30px}
+    .about-heading{margin-bottom:11px}
+    .about-rule{margin-bottom:24px}
+    .about-product{color:#eaf5ff;font-size:19px;font-weight:710;letter-spacing:-.025em;line-height:1.45;margin-bottom:24px}
+    .about-row{display:grid;grid-template-columns:95px minmax(0,1fr);align-items:baseline;gap:15px;padding:12px 0;border-top:1px solid var(--line2);font-size:13px}
+    .about-ack-row{grid-template-columns:minmax(0,1fr)}
+    .about-row .about-label{color:var(--muted)}
+    .about-row .about-value{color:var(--ink);font-weight:620;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+    .about-row a{color:var(--aqua);text-decoration:none;border-bottom:1px solid rgba(105,232,217,.3)}
+    .about-row a:hover{border-color:var(--aqua)}
+    .about-row a:focus-visible{outline:2px solid var(--aqua);outline-offset:3px}
+    .adjust-page{min-height:0;overflow-y:auto;display:flex;justify-content:center;align-items:center;scrollbar-color:var(--line) transparent}
+    .adjust-inner{margin:auto;width:min(690px,100%);padding:20px 0 26px}
+    .menu-item + .menu-item{margin-top:7px}
+    .menu-item.active{color:var(--aqua);background:rgba(105,232,217,.09);border-color:rgba(105,232,217,.32)}
+    @media(max-width:760px){.form-layout{grid-template-columns:1fr}.field-card,.adjust-card{padding:16px}.frequency-input{gap:4px;padding:8px}.digit-group{font-size:clamp(16px,4vw,26px)}.adjust-action-btn{min-width:90px}.adjust-inner{padding:12px}}
+
+    /* Settings: same palette/surface primitives, independent scroll container. */
+    .settings-page{height:100%;min-height:0;overflow-y:auto;overflow-x:hidden;padding:22px 16px 36px;scrollbar-color:var(--line) transparent}
+    .settings-page .settings-inner{width:min(1040px,100%);margin:0 auto}
+    #settingsPage .page-head{align-items:center;gap:14px}
+#settingsPage .page-rule{margin:17px 0 20px}
+#settingsPage .warning{display:flex;align-items:center;gap:13px;padding:15px 18px;margin-bottom:14px;border:1px solid rgba(248,197,125,.42);border-radius:13px;background:rgba(248,197,125,.08);color:#f4d7a7}
+#settingsPage .warning svg{width:23px;height:23px;flex:none;color:var(--amber)}
+#settingsPage .warning strong{font-weight:750;font-size:14px}
+#settingsPage .section-card{padding-bottom:25px}
+#settingsPage .block-rule{margin:9px 0 16px}
+#settingsPage .backup-card{margin-bottom:14px}
+#settingsPage .backup-line{display:flex;align-items:center;justify-content:space-between;gap:24px}
+#settingsPage .backup-buttons{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-start}
+#settingsPage .action-btn{height:43px;min-width:146px;font-size:13px;font-weight:730;padding:0 18px}
+#settingsPage .card-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:14px;align-items:stretch}
+#settingsPage .left-stack{display:grid;grid-template-rows:auto 1fr;gap:14px;min-width:0;min-height:0}
+#settingsPage .field-row{display:grid;grid-template-columns:minmax(130px,1fr) minmax(0,1.12fr);align-items:center;gap:16px;padding:9px 0;border-bottom:1px solid var(--line2);min-height:56px}
+#settingsPage .field-row:last-child{border-bottom:0}
+#settingsPage .field-label{color:var(--muted);font-size:12px;font-weight:590;line-height:1.35;margin-bottom:0}
+#settingsPage .input-wrap{min-width:0}
+#settingsPage .field-input,#settingsPage .calibration-input{border:1px solid var(--control-border);background:var(--control-bg);color:#eaf5ff}
+#settingsPage .field-input{display:block;width:100%;height:38px;padding:0 11px;font-size:12px;font-weight:620;letter-spacing:.01em;border-radius:9px;transition:border-color .15s,box-shadow .15s}
+#settingsPage .field-input:hover{border-color:#557193}
+#settingsPage .field-input:focus,#settingsPage .calibration-input:focus{outline:none;border-color:var(--aqua);box-shadow:0 0 0 2px rgba(105,232,217,.12)}
+#settingsPage .field-input::placeholder{color:#637a99;font-weight:500}
+#settingsPage .mono{font-family:ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;font-variant-numeric:tabular-nums}
+#settingsPage .text-input{font-family:ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace}
+#settingsPage .toggle-row{padding-top:15px;min-height:55px}
+#settingsPage .toggle-status{font-size:12px;color:var(--muted);font-weight:700;min-width:24px;text-align:right}
+#settingsPage .switch{position:relative;width:49px;height:27px;flex:none;padding:0;border:1px solid #3d5271;border-radius:20px;background:#223149;transition:background .2s,border-color .2s}
+#settingsPage .switch:before{content:"";position:absolute;width:19px;height:19px;top:3px;left:4px;border-radius:50%;background:#a7bad3;box-shadow:0 2px 4px rgba(0,0,0,.15);transition:transform .2s,background .2s}
+#settingsPage .switch[aria-checked="true"]{background:rgba(105,232,217,.27);border-color:var(--aqua)}
+#settingsPage .switch[aria-checked="true"]:before{transform:translateX(20px);background:var(--aqua)}
+#settingsPage .card-foot{margin-top:15px;color:var(--soft);font-size:11px;line-height:1.5}
+#settingsPage .settings-card{display:flex;flex-direction:column;min-width:0}
+#settingsPage .block-actions{display:flex;justify-content:flex-end;margin-top:auto;padding-top:18px}
+#settingsPage .block-actions .action-btn{min-width:112px;height:39px}
+#settingsPage .calibration-card{display:flex;flex-direction:column;min-width:0;min-height:0}
+#settingsPage .calibration-options{display:grid;grid-template-columns:1fr;margin-bottom:19px}
+#settingsPage .calibration-options .field-row{grid-template-columns:minmax(0,1fr) auto;gap:12px}
+#settingsPage .calibration-options .toggle-row{padding-top:9px}
+#settingsPage .calibration-heading{margin-bottom:10px}
+#settingsPage .calibration-heading strong{font-size:13px;font-weight:700}
+#settingsPage .calibration-heading span{font-size:11px;color:var(--muted)}
+#settingsPage .calibration-scroll{flex:1 1 0;height:0;min-height:180px;overflow:auto;border:1px solid var(--control-border);border-radius:10px;scrollbar-color:#415777 #121e30;overscroll-behavior:contain}
+#settingsPage .calibration-table{border-collapse:separate;border-spacing:0;width:100%;table-layout:fixed;font-size:12px}
+#settingsPage .calibration-table thead th{position:sticky;top:0;z-index:2;background:#213249;color:#dce9fa;text-align:left;padding:12px 15px;border-bottom:1px solid #455b79;font-weight:700}
+#settingsPage .calibration-table thead th+th{border-left:1px solid rgba(75,98,129,.45)}
+#settingsPage .calibration-table tbody tr:nth-child(even){background:rgba(34,53,80,.18)}
+#settingsPage .calibration-table tbody tr:hover{background:rgba(67,99,143,.18)}
+#settingsPage .calibration-table tbody td{padding:7px 13px;border-bottom:1px solid var(--line2)}
+#settingsPage .calibration-table tbody tr:last-child td{border-bottom:0}
+#settingsPage .calibration-table tbody td+td{border-left:1px solid rgba(75,98,129,.22)}
+#settingsPage .calibration-cell{display:flex;align-items:center;gap:10px;min-width:0}
+#settingsPage .point-index{color:var(--soft);font:11px ui-monospace,SFMono-Regular,Consolas,monospace;flex:none;width:22px;text-align:right}
+#settingsPage .calibration-input{width:100%;min-width:0;height:33px;padding:0 10px;border-radius:7px;font:12px ui-monospace,SFMono-Regular,Consolas,monospace;font-variant-numeric:tabular-nums}
+#settingsPage .calibration-input::placeholder{color:#536a88}
+#settingsPage .field-input[aria-invalid="true"], #settingsPage .calibration-input[aria-invalid="true"]{border-color:var(--red);background:rgba(148,34,65,.12);box-shadow:0 0 0 1px rgba(255,140,158,.16)}
+#settingsPage .validation-feedback{margin-top:12px;padding:10px 12px;border:1px solid rgba(255,140,158,.48);border-radius:9px;color:#ffb2bf;background:rgba(255,140,158,.07);font-size:11px;line-height:1.5}
+#settingsPage .validation-feedback[hidden]{display:none}
+#settingsPage .calibration-actions{gap:10px}
+#settingsPage .source-selector{width:200px;height:38px;max-width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;padding:4px;border:1px solid var(--control-border);border-radius:10px;background:var(--control-bg)}
+#settingsPage .source-choice{font-size:12px}
+#settingsPage .calibration-note{margin-top:11px;color:var(--soft);font-size:11px;line-height:1.5}
+#settingsPage .field-input.device-value, #settingsPage .calibration-input.device-value{color:var(--muted)}
+#settingsPage .field-input.empty-value::placeholder, #settingsPage .calibration-input.empty-value::placeholder{color:var(--muted);font-style:italic;opacity:1}
+#settingsPage .backup-feedback{margin-top:12px;color:var(--muted);font-size:12px;line-height:1.5}
+#settingsPage .backup-feedback[hidden]{display:none}
+#settingsPage .backup-feedback.error{color:#ffb2bf}
+#settingsPage .backup-feedback.success{color:var(--green)}
+    @media(max-width:760px){
+      .settings-page{padding:16px 10px 28px}
+      #settingsPage .section-card{padding:18px}
+      #settingsPage .card-grid{grid-template-columns:minmax(0,1fr)}
+      #settingsPage .calibration-scroll{flex:none;height:340px;min-height:0}
+      #settingsPage .field-row{grid-template-columns:minmax(116px,.95fr) minmax(0,1fr);gap:10px}
+      #settingsPage .backup-line{flex-wrap:wrap}
+      #settingsPage .backup-buttons{justify-content:flex-start}
+      #settingsPage .backup-buttons .action-btn{flex:1}
+    }
+    @media(max-width:430px){
+      #settingsPage .source-selector{width:162px}
+      #settingsPage .backup-buttons{flex-direction:column}
+      #settingsPage .backup-buttons .action-btn{width:100%}
+      #settingsPage .field-row{grid-template-columns:1fr;gap:6px}
+      #settingsPage .toggle-row{display:flex;align-items:center;justify-content:space-between}
+      #settingsPage .calibration-table thead th{padding:10px 9px}
+      #settingsPage .calibration-table tbody td{padding:7px}
+      #settingsPage .calibration-cell{gap:5px}
+      #settingsPage .point-index{width:18px}
+      #settingsPage .calibration-input{padding:0 6px;font-size:11px}
+    }
+
+  </style>
+</head>
+<body>
+  <div id="menuBackdrop" class="backdrop"></div>
+  <main class="shell">
+    <header class="surface topbar">
+      <button id="menuBtn" class="menu-btn" type="button" aria-label="Menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+      <div class="title" id="appTitle"></div>
+      <div class="topbar-actions">
+        <button id="connectBtn" class="connect-btn" type="button">Connect</button>
+      </div>
+    </header>
+    <div id="supportNotice" class="notice"></div>
+    <section class="dashboard" id="dashboardPage">
+      <div class="column left">
+        <article class="surface panel">
+          <div class="block-title">Device info</div><div class="block-rule"></div>
+          <div class="rows">
+            <div class="row"><div class="label">Firmware version</div><div class="value" id="fwValue">N/A</div></div>
+            <div class="row"><div class="label">Serial number</div><div class="value" id="serialValue">N/A</div></div>
+            <div class="row"><div class="label">Operating time</div><div class="value" id="uptimeValue">N/A</div></div>
+          </div>
+        </article>
+        <article class="surface panel">
+          <div class="block-title">Calibration</div><div class="block-rule"></div>
+          <div class="rows">
+            <div class="row"><div class="label">Calibration</div><div class="value" id="calibrationStateValue">N/A</div></div>
+            <div class="row"><div class="label">Calibration source</div><div class="value" id="sourceValue">N/A</div></div>
+            <div class="row"><div class="label">Sensor averaging</div><div class="value" id="averagingValue">N/A</div></div>
+            <div class="row big"><div class="label" id="sensorRowLabel">Heater current</div><div class="value" id="sensorValue">N/A</div></div>
+          </div>
+          <div class="text-table"><table><thead><tr><th>Point</th><th id="thresholdHeader">Heater current</th><th>Correction</th></tr></thead><tbody id="calibrationTable"><tr class="empty-row"><td colspan="3">No calibration data</td></tr></tbody></table></div>
+        </article>
+      </div>
+      <div class="column mid">
+        <article class="surface panel">
+          <div class="block-title">Frequencies</div><div class="block-rule"></div>
+          <div class="rows">
+            <div class="row"><div class="label">Configured DDS center</div><div class="value" id="configuredCenterValue">N/A</div></div>
+            <div class="row"><div class="label">Configured DDS span</div><div class="value" id="spanValue">N/A</div></div>
+            <div class="row big"><div class="label">Current DDS center</div><div class="value" id="currentCenterValue">N/A</div></div>
+            <div class="row"><div class="label">Calibration correction</div><div class="value" id="correctionValue">N/A</div></div>
+            <div class="row"><div class="label">Analog calibration</div><div class="value" id="analogStateValue">N/A</div></div>
+            <div class="row"><div class="label" title="Internal AD9832 tuning-frequency correction, before any output-stage multiplication">Digital calibration offset (at DDS)</div><div class="value" id="digitalOffsetValue">N/A</div></div>
+            <div class="row"><div class="label">Offset limits</div><div class="value" id="offsetLimitsValue">N/A</div></div>
+          </div>
+        </article>
+        <article class="surface panel user">
+          <div class="block-title">Misc</div><div class="block-rule"></div>
+          <div class="rows">
+            <div class="row"><div class="label">CPLD configuration</div><div class="value" id="cpldValue">N/A</div></div>
+            <div class="row"><div class="label">User text 1</div><div class="value" id="usertext1">N/A</div></div>
+            <div class="row"><div class="label">User text 2</div><div class="value" id="usertext2">N/A</div></div>
+            <div class="row"><div class="label">User text 3</div><div class="value" id="usertext3">N/A</div></div>
+            <div class="row"><div class="label">User text 4</div><div class="value" id="usertext4">N/A</div></div>
+            <div class="row"><div class="label">User text 5</div><div class="value" id="usertext5">N/A</div></div>
+          </div>
+        </article>
+      </div>
+      <div class="column right">
+        <article class="surface panel">
+          <div class="graph-title"><div class="name" id="liveTitle">Heater current</div></div>
+          <div class="block-rule"></div>
+          <div class="graph-meta" id="liveUnit">mA</div>
+          <div id="liveChart" class="chart-container"><div class="chart-empty">Live data unavailable</div></div>
+        </article>
+        <article class="surface panel">
+          <div class="graph-title"><div class="name">Calibration curve</div></div>
+          <div class="block-rule"></div>
+          <div class="graph-meta">mHz</div>
+          <div id="calibrationChart" class="chart-container"><div class="chart-empty">Calibration data unavailable</div></div>
+        </article>
+      </div>
+    </section>
+    <section class="adjust-page" id="adjustPage" hidden aria-labelledby="pageTitle">
+      <div class="adjust-inner">
+      <div class="adjust-head"><h1 id="pageTitle">Adjust</h1></div>
+      <div class="adjust-rule"></div>
+      <div class="form-layout">
+        <section class="surface field-card">
+          <div id="outputFrequencyLabel" class="field-label">Output frequency</div>
+          <div id="outputFrequency" class="frequency-selector" role="group" aria-labelledby="outputFrequencyLabel">
+            <button type="button" class="frequency-choice" data-frequency="5" aria-pressed="false">5 MHz</button>
+            <button type="button" class="frequency-choice selected" data-frequency="10" aria-pressed="true">10 MHz</button>
+            <button type="button" class="frequency-choice" data-frequency="15" aria-pressed="false">15 MHz</button>
+            <button type="button" class="frequency-choice" data-frequency="20" aria-pressed="false">20 MHz</button>
+          </div>
+        </section>
+        <section class="surface field-card">
+          <div class="field-label">Current offset</div>
+          <output id="currentOffset" class="current-value" aria-label="Current offset at selected output frequency">
+            <span id="currentOffsetNumber">N/A</span>
+          </output>
+        </section>
+        <section class="surface adjust-card">
+          <div class="adjust-heading">
+            <div class="field-label">Output frequency adjustment</div>
+          </div>
+          <div class="offset-ruler" id="offsetRuler" role="img" aria-label="Adjustment within the selected output frequency offset limits">
+            <div class="offset-ruler-current" id="offsetRulerCurrent" hidden>
+              <span class="offset-ruler-tag" id="offsetRulerCurrentText">Adjustment</span>
+              <span class="offset-ruler-pointer"></span>
+            </div>
+            <div class="offset-ruler-track" aria-hidden="true">
+              <span class="offset-ruler-center"></span>
+            </div>
+            <div class="offset-ruler-labels">
+              <span id="offsetRulerMin">N/A</span><span>0 Hz</span><span id="offsetRulerMax">N/A</span>
+            </div>
+          </div>
+          <div class="frequency-input" role="group" aria-label="Output frequency adjustment. Scroll the mouse wheel over each three-digit group to adjust its value.">
+            <button id="signButton" class="sign-toggle" type="button" aria-label="Sign: positive; click to change" title="Toggle positive / negative">+</button>
+            <span id="digits0" class="digit-group" data-group="0" title="Scroll to adjust hertz">000</span>
+            <span class="point" aria-hidden="true">.</span>
+            <span id="digits1" class="digit-group" data-group="1" title="Scroll to adjust millihertz">000</span>
+            <span id="digits2" class="digit-group" data-group="2" title="Scroll to adjust microhertz">000</span>
+            <span id="digits3" class="digit-group" data-group="3" title="Scroll to adjust nanohertz">000</span>
+            <span class="adjust-unit">Hz</span>
+          </div>
+          <div class="input-hint">Scroll the mouse wheel over each 3-digit group to adjust</div>
+        </section>
+        <div class="adjust-actions" style="grid-column:1/-1">
+          <button id="resetBtn" type="button" class="adjust-action-btn reset">Reset to zero</button>
+          <button id="applyBtn" type="button" class="adjust-action-btn apply" disabled>Apply</button>
+          <button id="saveBtn" type="button" class="adjust-action-btn" disabled>Save</button>
+        </div>
+        <details class="surface details-card">
+          <summary>Details</summary>
+          <div class="detail-list">
+            <div class="detail-row"><span class="detail-name">Multiplier</span><span class="detail-value" id="rawMultiplierValue">10</span></div>
+            <div class="detail-row"><span class="detail-name">Divisor</span><span class="detail-value" id="divisorValue">N/A</span></div>
+            <div class="detail-row"><span class="detail-name">DDS to selected output frequency multiplier</span><span class="detail-value" id="outputMultiplierValue">×2 (provisional)</span></div>
+            <div class="detail-row"><span class="detail-name">Minimal step calculation</span><span class="detail-value accent" id="stepCalculationValue">20,000,000 ÷ 2³² × 2 = 0.009313225746 Hz</span></div>
+            <div class="detail-row"><span class="detail-name">Hex offset</span><span class="detail-value accent" id="hexOffsetValue" title="Raw signed offset calculation and four-byte payload for 0x2C / 0x2E">0 DDS counts → raw 0 → 0x00000000</span></div>
+            <div class="detail-note" id="detailNote">Offset math uses the divisor and limit read from the connected device. Output-stage multipliers are provisional.</div>
+          </div>
+        </details>
+      </div>
+      </div>
+    </section>
+    <section class="settings-page" id="settingsPage" hidden aria-labelledby="settingsPageTitle">
+
+      <div class="settings-inner">
+        <div class="page-head"><h1 id="settingsPageTitle">Settings</h1></div>
+        <div class="page-rule"></div>
+        <div class="warning" role="alert">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 10 18H2L12 3Z"/><path d="M12 9v5"/><path d="M12 17.5h.01" stroke-width="2.6"/></svg>
+          <strong>Back up your settings before changing anything here!</strong>
+        </div>
+        <section class="surface section-card backup-card" aria-labelledby="backupTitle">
+          <div class="block-title" id="backupTitle">Settings backup</div><div class="block-rule"></div>
+          <div class="backup-line">
+            <div class="backup-buttons">
+              <button id="saveNvramBtn" class="action-btn primary" type="button" disabled>Save NVRAM</button>
+              <button id="restoreNvramBtn" class="action-btn" type="button" disabled>Restore NVRAM</button>
+              <input id="nvramFileInput" type="file" accept=".bin,application/octet-stream" hidden aria-label="Choose NVRAM image">
+            </div>
+          </div>
+          <div id="nvramFeedback" class="backup-feedback" role="status" aria-live="polite" hidden></div>
+        </section>
+        <div class="card-grid">
+          <div class="left-stack">
+            <section class="surface section-card settings-card" aria-labelledby="ddsTitle">
+            <div class="block-title" id="ddsTitle">DDS</div><div class="block-rule"></div>
+            <div class="field-row"><label class="field-label" for="ddsBaseHigh">DDS high</label><div class="input-wrap"><input id="ddsBaseHigh" class="field-input mono" type="text" placeholder="0x00000000" spellcheck="false" autocomplete="off"></div></div>
+            <div class="field-row"><label class="field-label" for="ddsBaseLow">DDS low</label><div class="input-wrap"><input id="ddsBaseLow" class="field-input mono" type="text" placeholder="0x00000000" spellcheck="false" autocomplete="off"></div></div>
+            <div class="field-row"><label class="field-label" for="offsetDivisor">Offset divisor</label><div class="input-wrap"><input id="offsetDivisor" class="field-input mono" type="text" inputmode="numeric" spellcheck="false" autocomplete="off"></div></div>
+            <div class="card-foot">Values are read from the device. Save writes changed fields, then verifies them by reading back.</div>
+            <div class="validation-feedback" id="ddsFeedback" role="alert" hidden></div>
+            <div class="block-actions"><button class="action-btn primary" type="button" data-validate="dds">Save</button></div>
+          </section>
+          <section class="surface section-card settings-card" aria-labelledby="miscTitle">
+            <div class="block-title" id="miscTitle">Misc</div><div class="block-rule"></div>
+            <div class="field-row"><label class="field-label" for="userText1">User text 1</label><div class="input-wrap"><input id="userText1" class="field-input text-input" type="text" placeholder="Enter text" spellcheck="false" autocomplete="off"></div></div>
+            <div class="field-row"><label class="field-label" for="userText2">User text 2</label><div class="input-wrap"><input id="userText2" class="field-input text-input" type="text" placeholder="Enter text" spellcheck="false" autocomplete="off"></div></div>
+            <div class="field-row"><label class="field-label" for="userText3">User text 3</label><div class="input-wrap"><input id="userText3" class="field-input text-input" type="text" placeholder="Enter text" spellcheck="false" autocomplete="off"></div></div>
+            <div class="field-row"><label class="field-label" for="userText4">User text 4</label><div class="input-wrap"><input id="userText4" class="field-input text-input" type="text" placeholder="Enter text" spellcheck="false" autocomplete="off"></div></div>
+            <div class="field-row"><label class="field-label" for="userText5">User text 5</label><div class="input-wrap"><input id="userText5" class="field-input text-input" type="text" placeholder="Enter text" spellcheck="false" autocomplete="off"></div></div>
+            <div class="validation-feedback" id="miscFeedback" role="alert" hidden></div>
+            <div class="block-actions"><button class="action-btn primary" type="button" data-validate="misc">Save</button></div>
+          </section>
+          </div>
+          <section class="surface section-card calibration-card" aria-labelledby="calibrationTitle">
+          <div class="block-title" id="calibrationTitle">Calibration</div><div class="block-rule"></div>
+          <div class="calibration-options">
+            <div class="field-row toggle-row">
+              <span class="field-label" id="calEnabledLabel">Calibration enabled</span>
+              <div class="toggle-combo"><span id="calEnabledStatus" class="toggle-status">Off</span><button id="calEnabledSwitch" class="switch" type="button" role="switch" aria-checked="false" aria-labelledby="calEnabledLabel"></button></div>
+            </div>
+            <div class="field-row toggle-row">
+              <span class="field-label" id="calSourceLabel">Calibration source</span>
+              <div class="source-selector" role="group" aria-labelledby="calSourceLabel">
+                <button type="button" class="source-choice selected" data-source="adc" aria-pressed="true">ADC</button>
+                <button type="button" class="source-choice" data-source="one-wire" aria-pressed="false">1-Wire</button>
+              </div>
+            </div>
+            <div class="field-row toggle-row">
+              <span class="field-label" id="calAverageLabel">Sensor averaging</span>
+              <div class="toggle-combo"><span id="calAverageStatus" class="toggle-status">Off</span><button id="calAverageSwitch" class="switch" type="button" role="switch" aria-checked="false" aria-labelledby="calAverageLabel"></button></div>
+            </div>
+          </div>
+          <div class="calibration-heading"><strong>Calibration table</strong><span id="activePointsText">40 points · awaiting device</span></div>
+          <div class="calibration-scroll" role="region" aria-label="Scrollable 40-point calibration table" tabindex="0">
+            <table class="calibration-table">
+              <thead><tr><th scope="col">Value</th><th scope="col">Correction</th></tr></thead>
+              <tbody id="calibrationRows"></tbody>
+            </table>
+          </div>
+          <div class="calibration-note">Use 16-bit hexadecimal values (0x0000–0xFFFF). Every populated point must contain both columns, with no skipped rows. Rows beyond the active-point count appear as (empty). Save validates the table, writes changed settings, and verifies readback.</div>
+          <div class="validation-feedback" id="calibrationFeedback" role="alert" hidden></div>
+          <div class="block-actions calibration-actions"><button class="action-btn primary" type="button" data-validate="calibration">Save</button></div>
+          </section>
+        </div>
+      </div>
+    
+    </section>
+    <section class="about-page" id="aboutPage" hidden aria-labelledby="aboutPageTitle">
+      <div class="surface about-card">
+        <h1 class="about-heading" id="aboutPageTitle">About</h1>
+        <div class="about-rule"></div>
+        <div class="about-product" id="aboutProduct"></div>
+        <div class="about-row"><span class="about-label">Version</span><span class="about-value">1.0</span></div>
+        <div class="about-row"><span class="about-label">Build</span><time class="about-value" datetime="2026-11-18T16:43:38Z">2026-11-18 16:43:38 GMT</time></div>
+        <div class="about-row"><span class="about-label">GitHub</span><a class="about-value" href="https://github.com/ioccy/rfs-tools" target="_blank" rel="noopener noreferrer">https://github.com/ioccy/rfs-tools</a></div>
+        <div class="about-row about-ack-row"><span class="about-value" id="aiAcknowledgement">Application development assisted by OpenAI GPT-6.</span></div>
+      </div>
+    </section>
+    <section class="log-page" id="logPage" hidden aria-labelledby="logPageTitle">
+      <div class="log-inner">
+        <div class="adjust-head"><h1 id="logPageTitle">Communication log</h1></div>
+        <div class="adjust-rule"></div>
+        <section class="surface panel log-card" aria-label="Command history">
+          <div class="command-table">
+            <table><thead><tr><th>Time</th><th>Command</th><th>Description</th><th>Result</th><th>Request / response</th></tr></thead>
+              <tbody id="commandLogRows"><tr class="empty-row"><td colspan="5">No commands yet</td></tr></tbody></table>
+          </div>
+        </section>
+      </div>
+    </section>
+  </main>
+  <aside id="menuPanel" class="menu-panel surface" aria-label="Menu" aria-hidden="true">
+    <nav class="drawer-nav" aria-label="Utility menu">
+      <div class="drawer-head">Menu</div>
+      <button id="dashboardMenuBtn" class="menu-item active" type="button" aria-current="page"><span>Dashboard</span><span class="chevron" aria-hidden="true">›</span></button>
+      <button id="adjustMenuBtn" class="menu-item" type="button"><span>Adjust</span><span class="chevron" aria-hidden="true">›</span></button>
+      <button id="settingsMenuBtn" class="menu-item" type="button"><span>Settings</span><span class="chevron" aria-hidden="true">›</span></button>
+      <button id="logMenuBtn" class="menu-item" type="button"><span>Log</span><span class="chevron" aria-hidden="true">›</span></button>
+      <button id="aboutMenuBtn" class="menu-item" type="button"><span>About</span><span class="chevron" aria-hidden="true">›</span></button>
+    </nav>
+  </aside>
+  <div id="toast" class="toaster" role="status" aria-live="polite"></div>
+  <script>
+  'use strict';
+
+  // Dashboard readers plus explicit Adjust write commands 0x2C and 0x2E.
+  // A single serial transport is shared by all pages.
+  // Maintainers: update the model version when rebuilding with a different model.
+  const APP_NAME = 'FE-5650A / FE-5680A RFS Tool';
+  const AI_MODEL_VERSION = 'GPT-6';
+  const PAGE_IDS = {dashboard:'dashboardPage',adjust:'adjustPage',settings:'settingsPage',log:'logPage',about:'aboutPage'};
+  const BAUD = 9600;
+  const TIMEOUT_MS = 2000;
+  const CONNECT_READY_TIMEOUT_MS = 20000;
+  const CONNECT_PROBE_MS = 900;
+  const BETWEEN_COMMANDS_MS = 70;
+  const MCLK_HZ = 20_000_000;
+  const DDS_LSB_HZ = MCLK_HZ / 2**32;
+  const TICK_MINUTES = 20;
+  const SLOT_SIZE = 65536;
+  const HEATER_MA_PER_COUNT = 3.282563025;
+  const TEMPERATURE_C_PER_COUNT = 0.5;
+
+  const GETTERS = [
+    [0xF0, 'Firmware version', []], [0x61, 'Serial number', []],
+    [0x67, 'Operating time', []], [0x47, 'Configuration', []],
+    [0x53, 'Sensor reading', []], [0x65, 'Calibration count', [0]],
+    [0x57, 'Calibration points', [0]], [0x59, 'Calibration corrections', [0]],
+    [0x22, 'DDS frequencies', []], [0x2D, 'Digital offset', []],
+    [0x3B, 'Offset limit', []], [0x3D, 'Offset scale', []],
+    [0x3E, 'Effective DDS offset', []], [0x5A, 'Analog inputs', []],
+    [0x2B, 'User text 1', []], [0x63, 'User text 2', []],
+    [0x7A, 'User text 3', []], [0x7C, 'User text 4', []],
+    [0x7E, 'User text 5', []]
+  ];
+  const ALLOWED = new Map(GETTERS.map(([cmd, name, payload]) => [cmd, {name, payload}]));
+  const EXPECTED_LENGTHS = new Map([
+    [0x67,3], [0x47,3], [0x53,2], [0x65,2], [0x57,81], [0x59,81], [0x22,8],
+    [0x2D,4], [0x3B,4], [0x3D,4], [0x3E,4]
+  ]);
+  // User text fields: [getter, setter, capacity in bytes including the NUL terminator].
+  const USER_TEXT = [[0x2B,0x2A,20],[0x63,0x62,35],[0x7A,0x7B,10],[0x7C,0x7D,10],[0x7E,0x7F,10]];
+  const TEXT_CAPACITIES = new Map([[0xF0,32],[0x61,20],...USER_TEXT.map(([getter,,max])=>[getter,max])]);
+  const ECHO_READS = new Set([0x57,0x59,0x65]); // replies begin with the echoed selector byte 00
+
+  const $ = id => document.getElementById(id);
+  const fmtNumber = (value, decimals=3) => Number(value).toLocaleString('en-US', {minimumFractionDigits:decimals, maximumFractionDigits:decimals});
+  const hex2 = n => Number(n).toString(16).toUpperCase().padStart(2,'0');
+  const hexBytes = bytes => bytes ? Array.from(bytes, hex2).join(' ') : '';
+  const delay = milliseconds => new Promise(resolve => setTimeout(resolve,milliseconds));
+  const uintLE = (bytes, offset, length) => {let n=0;for(let i=0;i<length;i++)n += bytes[offset+i]*2**(8*i);return n;};
+  const uintBE = (bytes, offset, length) => {let n=0;for(let i=0;i<length;i++)n = n*256+bytes[offset+i];return n;};
+  const signed32 = bytes => {if (bytes.length!==4) throw Error('Invalid numeric response');return (uintBE(bytes,0,4)|0);};
+  const xorBytes = bytes => bytes.reduce((acc,n)=>acc^n,0);
+  const get = (values,command) => values.get(command) ?? null;
+  const displayHz = value => fmtNumber(value)+' Hz';
+  const signedHz = value => value===0 ? '0.000 Hz' : Math.abs(value)<0.01 ? `${value>0?'+':''}${fmtNumber(value*1000)} mHz` : `${value>0?'+':''}${fmtNumber(value)} Hz`;
+  const spanHz = fullSpan => '±'+fmtNumber(fullSpan/2).replace(/\.?(0+)$/,'')+' Hz';
+  const status = enabled => enabled?'Enabled':'Disabled';
+  const escapeHtml = value => String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const readOnlyError = command => Error(`Command 0x${hex2(command)} is not an approved read request`);
+
+  // One wire-frame encoder for approved getters and setters. The caller still
+  // owns command allow-lists, payload validation and hardware write policy.
+  function encodeFrame(command,payload=[]) {
+    const length=4+payload.length+(payload.length?1:0);
+    const lo=length&255,hi=length>>>8;
+    const header=[command,lo,hi,command^lo^hi];
+    return Uint8Array.from(payload.length ? [...header,...payload,xorBytes(payload)] : header);
+  }
+  function requestFrame(command) {
+    if (!ALLOWED.has(command)) throw readOnlyError(command);
+    return encodeFrame(command,ALLOWED.get(command).payload);
+  }
+  function asciiField(payload) {
+    if (!payload.length || payload[payload.length-1]!==0) throw Error('Invalid text response');
+    for(let i=0;i<payload.length-1;i++)if(payload[i]<32||payload[i]>126)throw Error('Invalid text response');
+    // Preserve leading/trailing spaces: printable ASCII is device data, not UI padding (F8).
+    return String.fromCharCode(...payload.slice(0,-1));
+  }
+  function validateField(command,payload) {
+    if(EXPECTED_LENGTHS.has(command)&&payload.length!==EXPECTED_LENGTHS.get(command))throw Error('Unexpected response size');
+    if(TEXT_CAPACITIES.has(command)){
+      if(payload.length>TEXT_CAPACITIES.get(command))throw Error('Unexpected text size');
+      asciiField(payload);
+    }
+    if(ECHO_READS.has(command) && payload[0]!==0)throw Error('Invalid calibration response');
+    if(command===0x65 && (payload[1]<1||payload[1]>40))throw Error('Invalid calibration point count (must be 1..40)');
+    // A three-byte 0x67 response is valid even when its slot is unavailable.
+    // The dashboard displays N/A and NVRAM backup leaves that record erased (F9).
+    if(command===0x5A){
+      if(payload.length===8){for(let i=0;i<8;i+=2)if(uintLE(payload,i,2)>4095)throw Error('Invalid ADC reading');}
+      else if(payload.length!==4)throw Error('Unexpected ADC response');
+    }
+    return payload;
+  }
+  function calibrationWords(payload,signed=false) {
+    if(!payload||payload.length!==81||payload[0]!==0)throw Error('Invalid calibration response');
+    const words=[];
+    for(let i=1;i<81;i+=2){let value=uintLE(payload,i,2);if(signed&&value>=32768)value-=65536;words.push(value);}
+    return words;
+  }
+  // This predicts a correction from 0x2D/0x3D for the raw-offset limit display.
+  // For the actual digital DDS correction, prefer firmware getter 0x3E.
+  function offsetToDdsSteps(rawOffset,divisor) {
+    if(divisor<=0)throw Error('Invalid offset divisor');
+    if(rawOffset===0)return 0; // The rounding bias must not create an offset from zero (F10).
+    const magnitude=Math.trunc((Math.abs(rawOffset)*10+5)/divisor);
+    return rawOffset<0?-magnitude:magnitude;
+  }
+  // Predict the firmware's curve correction for the fresh 0x53 sample. This
+  // need not equal the LAST applied DDS correction: the firmware updates it
+  // periodically. For a valid monotonic table, values beyond either end use
+  // the nearest endpoint's EXACT correction, without extrapolation.
+  function curveCorrectionCandidate(sensor,thresholds,corrections) {
+    if(!Number.isFinite(sensor)||!thresholds||!corrections||
+       thresholds.length!==corrections.length||!thresholds.length)return null;
+    const n=thresholds.length;
+    if(n===1)return corrections[0];
+    const descending=thresholds[0]>thresholds[n-1];
+    if(thresholds[0]===thresholds[n-1])return null;
+    // Invalid, repeated or unordered thresholds have no verified equivalent
+    // interpolation behavior; do not invent a result for those tables.
+    for(let i=1;i<n;i++){
+      if(descending ? thresholds[i-1]<=thresholds[i] : thresholds[i-1]>=thresholds[i])return null;
+    }
+    if(descending ? sensor>=thresholds[0] : sensor<=thresholds[0])return corrections[0];
+    if(descending ? sensor<=thresholds[n-1] : sensor>=thresholds[n-1])return corrections[n-1];
+    for(let i=0;i<n-1;i++){
+      const x0=thresholds[i],x1=thresholds[i+1];
+      if(sensor===x0)return corrections[i];
+      if(sensor===x1)return corrections[i+1];
+      if(descending ? x1<sensor&&sensor<x0 : x0<sensor&&sensor<x1){
+        // Approximate firmware soft-float by rounding each operation to f32.
+        // The resulting integer is truncated toward zero, never rounded.
+        const dx=Math.fround(Math.fround(sensor)-Math.fround(x0));
+        const dy=Math.fround(Math.fround(corrections[i+1])-Math.fround(corrections[i]));
+        const width=Math.fround(Math.fround(x1)-Math.fround(x0));
+        return Math.trunc(Math.fround(Math.fround(Math.fround(dx*dy)/width)+Math.fround(corrections[i])));
+      }
+    }
+    return null;
+  }
+
+  // The app is the only controller: 0x47 establishes the initial curve state.
+  // It is tracked across Settings changes and reset for each fresh connection.
+  const RECOVERY_NOTE='UART reconstruction from effective 0x22 words, not a direct EEPROM read. '
+    +'Valid curves clamp at endpoints; in-range interpolation can differ by one DDS count near rounding boundaries. '+
+    'A fresh sensor sample may not match the last DDS rebuild.';
+  const hex8=n=>n.toString(16).toUpperCase().padStart(8,'0');
+  // The one authoritative pair of *configured* (EEPROM base) DDS words is
+  // stored in configuredDDSRecovery.words. Dashboard, Settings and NVRAM
+  // backup must all use it; 0x22 alone contains *effective* working words.
+  function configuredDDSFromWords(words,note){
+    if(!Array.isArray(words)||words.length!==2||
+       words.some(n=>!Number.isInteger(n)||n<0||n>0xFFFFFFFF))
+      throw Error('Invalid configured DDS tuning words');
+    const pair=words.map(n=>n>>>0);
+    return {words:pair,
+      display:displayHz(((pair[0]+pair[1])/2)*DDS_LSB_HZ),note};
+  }
+  function configuredDDSBytes(){
+    const words=configuredDDSRecovery?.words;
+    if(!words)throw Error('Configured DDS words unavailable: cannot back up 0x2000–0x2007 from effective 0x22 data. Reconnect or refresh the device before saving NVRAM');
+    return Uint8Array.of(...words.flatMap(n=>[n>>>24,(n>>>16)&255,(n>>>8)&255,n&255]));
+  }
+  function configuredDDSCandidate(values) {
+    const words=get(values,0x22),digital=get(values,0x3E),cfg=get(values,0x47);
+    if(!words||words.length!==8||!digital||digital.length!==4||!cfg||cfg.length!==3||runtimeCurveEnabled===null)
+      return {display:'N/A',note:'Incomplete 0x22 / 0x3E / 0x47 snapshot or unknown curve state. '+RECOVERY_NOTE};
+    const flags=cfg[0];
+    if(flags&0x0C)return {display:'N/A (analog active)',note:'Optional analog corrections depend on ADC samples from the last DDS rebuild. '+RECOVERY_NOTE};
+    const a=uintBE(words,0,4),b=uintBE(words,4,4),digitalSteps=signed32(digital);
+    let curveSteps=0;
+    if(runtimeCurveEnabled){
+      const countBytes=get(values,0x65),sensorBytes=get(values,0x53);
+      const count=countBytes&&countBytes.length===2&&countBytes[0]===0?countBytes[1]:0;
+      if(count<1||count>40||!sensorBytes||sensorBytes.length!==2)
+        return {display:'N/A (curve data unavailable)',note:RECOVERY_NOTE};
+      try{
+        const tempMode=Boolean(flags&0x10),raw=uintLE(sensorBytes,0,2);
+        // For ADC mode, 0xFFFF denotes an unavailable processed sample.
+        // Treating it as a real high sensor reading clamps to an endpoint
+        // and can corrupt the reconstructed *configured* DDS/NVRAM words.
+        if(!tempMode&&raw===0xFFFF)
+          return {display:'N/A (sensor unavailable)',note:'0x53 returned the invalid ADC sample sentinel. '+RECOVERY_NOTE};
+        const sensor=tempMode?signed16(raw):raw;
+        const allX=calibrationWords(get(values,0x57)),allY=calibrationWords(get(values,0x59),true);
+        curveSteps=curveCorrectionCandidate(sensor,
+          allX.slice(0,count).map(x=>tempMode?signed16(x):x),allY.slice(0,count));
+      }catch{curveSteps=null;}
+      if(curveSteps===null)return {display:'N/A (invalid curve)',
+        note:'Calibration is enabled, but the curve table is invalid or a sensor value is unavailable. '+RECOVERY_NOTE};
+    }
+    const total=digitalSteps+curveSteps;
+    const baseWords=[(a-total)>>>0,(b-total)>>>0];
+    return configuredDDSFromWords(baseWords,
+      `Reconstructed NVRAM FREQ0/FREQ1: 0x${hex8(baseWords[0])} / 0x${hex8(baseWords[1])}. `+
+      `Digital ${digitalSteps} + curve ${curveSteps} = ${total} DDS counts; curve state: ${runtimeCurveEnabled?'ON':'OFF'} (tracked from 0x47). `+RECOVERY_NOTE);
+  }
+
+  function analogOffsetSteps(adcPayload,cfg) {
+    const [flags,,clamp]=cfg;
+    if(!(flags&0x0C))return 0;
+    if(!adcPayload)return null;
+    let first,second,firstSteps,secondSteps;
+    if(adcPayload.length===4){
+      first=adcPayload[1];second=adcPayload[2];
+      if(first<clamp)first=128;
+      firstSteps=(first-128)*64;secondSteps=(second-128)*8;
+    }else if(adcPayload.length===8){
+      const channels=[0,2,4,6].map(i=>uintLE(adcPayload,i,2));
+      if(channels.some(n=>n>4095))return null;
+      first=channels[1];second=channels[2];
+      if(first<clamp)first=2048;
+      firstSteps=(first-2048)*8;secondSteps=second-2048;
+    }else return null;
+    return (flags&0x04?firstSteps:0)+(flags&0x08?secondSteps:0);
+  }
+  function cpldPortBValue(flags,selector) {
+    const mappings=[[0x01,0x20],[0x02,0x10],[0x04,0x31],[0x08,0x32],[0x10,0x34],[0x20,0x38]];
+    const selected=mappings.find(([bit])=>selector&bit);
+    let portB=selected?selected[1]:0;
+    if(flags&0x02)portB|=0x80;
+    if(flags&0x80)portB|=0x40;
+    return portB;
+  }
+  const signed16 = value => value>=32768?value-65536:value;
+  const sensorValue = (raw,tempMode) => tempMode?`${fmtNumber(signed16(raw)*TEMPERATURE_C_PER_COUNT,1)} °C`:`${fmtNumber(raw*HEATER_MA_PER_COUNT,1)} mA`;
+
+  function buildReport(values){
+    const fw=get(values,0xF0),serial=get(values,0x61),meter=get(values,0x67);
+    const cfg=get(values,0x47), flags=cfg&&cfg.length===3?cfg[0]:null;
+    const curveEnabled=flags===null?null:runtimeCurveEnabled;
+    const tempMode=flags===null?false:Boolean(flags&0x10);
+    const analog1=flags===null?false:Boolean(flags&0x04),analog2=flags===null?false:Boolean(flags&0x08);
+    const sensorName=flags===null?'Sensor reading':tempMode?'Package temperature':'Heater current';
+    const countPayload=get(values,0x65);
+    const count=countPayload&&countPayload.length===2&&countPayload[0]===0&&countPayload[1]>=1&&countPayload[1]<=40?countPayload[1]:null;
+    let thresholds=null,corrections=null;
+    try{if(get(values,0x57))thresholds=calibrationWords(get(values,0x57));}catch{}
+    try{if(get(values,0x59))corrections=calibrationWords(get(values,0x59),true);}catch{}
+    const reading=get(values,0x53);
+    let processed=reading&&reading.length===2?uintLE(reading,0,2):null;
+    if(processed===65535&&!tempMode)processed=null;
+    let curveSteps=null;
+    if(processed!==null&&count!==null&&thresholds&&corrections){
+      const nativeThresholds=thresholds.slice(0,count).map(x=>tempMode?signed16(x):x);
+      curveSteps=curveCorrectionCandidate(tempMode?signed16(processed):processed,
+        nativeThresholds,corrections.slice(0,count));
+    }
+    const analogSteps=cfg&&cfg.length===3?analogOffsetSteps(get(values,0x5A),cfg):null;
+    const wordsDDS=get(values,0x22),digitalEffective=get(values,0x3E);
+    const limits=get(values,0x3B),offsetDivisor=get(values,0x3D);
+    const tuneAdj=digitalEffective&&digitalEffective.length===4?signed32(digitalEffective):null;
+    // 0x22 is the EFFECTIVE working-RAM DDS image, not the NVRAM pair.
+    // Current = observed words from 0x22; no synthetic correction is added.
+    // Configured = one frozen reconstruction using the tracked curve state
+    // initialized from 0x47, captured after a stable 0x22/0x3E/0x53/0x22 snapshot.
+    let configuredCenter=configuredDDSRecovery?.display||'N/A';
+    let currentCenter='N/A',span='N/A';
+    if(wordsDDS&&wordsDDS.length===8){
+      const d0=uintBE(wordsDDS,0,4),d1=uintBE(wordsDDS,4,4);
+      currentCenter=displayHz(((d0+d1)/2)*DDS_LSB_HZ);
+      // Common correction preserves the DDS tuning-word difference modulo 2^32.
+      const modularGap=(d0-d1)>>>0;
+      span=spanHz(Math.min(modularGap,2**32-modularGap)*DDS_LSB_HZ);
+    }
+    const divisor=offsetDivisor&&offsetDivisor.length===4?signed32(offsetDivisor):0;
+    // The firmware's 0x3E result is already the signed correction in DDS
+    // tuning-word counts; do not recompute it from raw 0x2D/0x3D.
+    const digitalCalibrationOffset=tuneAdj===null?'N/A':signedHz(tuneAdj*DDS_LSB_HZ);
+    const offsetLimits=divisor>0&&limits&&limits.length===4
+      ?'±'+displayHz(offsetToDdsSteps(Math.abs(signed32(limits)),divisor)*DDS_LSB_HZ):'N/A';
+    const userText=USER_TEXT.map(([command])=>{
+      const payload=get(values,command);
+      return payload===null?'N/A':(asciiField(payload)||'(empty)');
+    });
+    let calibrationPoints=null;
+    if(count!==null&&thresholds&&corrections)calibrationPoints=Array.from({length:count},(_,i)=>({
+      point:i+1,rawSensor:thresholds[i],sensorDisplay:sensorValue(thresholds[i],tempMode),
+      sensorNumeric:tempMode?signed16(thresholds[i])*TEMPERATURE_C_PER_COUNT:thresholds[i]*HEATER_MA_PER_COUNT,
+      correctionSteps:corrections[i],correctionHz:corrections[i]*DDS_LSB_HZ,
+      correctionDisplay:signedHz(corrections[i]*DDS_LSB_HZ)
+    }));
+    const uptime=meter&&meter.length===3&&meter[0]<40
+      ?fmtNumber((meter[0]*SLOT_SIZE+uintLE(meter,1,2))*TICK_MINUTES/1440,2)+' days':'N/A';
+    return {
+      identity:{firmware:fw?asciiField(fw):'N/A',serialNumber:serial?asciiField(serial):'N/A',operatingTime:uptime},
+      frequencies:{configuredCenter,currentCenter,configuredSpan:span,
+        // The app owns calibration state: 0x47 at connection and verified writes.
+        calibrationCorrection:curveEnabled===null?'N/A':!curveEnabled?
+          '0.000 Hz':curveSteps===null?'N/A (invalid curve)':
+          signedHz(curveSteps*DDS_LSB_HZ),
+        analogCalibrationState:flags===null?'N/A':status(analog1||analog2),
+        digitalCalibrationOffset,offsetLimits,
+        analogCalibrationOffset:flags===null?'N/A':(analog1||analog2)?(analogSteps!==null?signedHz(analogSteps*DDS_LSB_HZ):'N/A'):'Not active'},
+      calibration:{calibration:curveEnabled===null?'N/A':status(curveEnabled),
+        source:flags===null?'N/A':tempMode?'1-Wire':'ADC',
+        averaging:flags===null?'N/A':status(Boolean(flags&0x20)),
+        sensorName,sensorReading:processed!==null?sensorValue(processed,tempMode):'N/A',
+        sensorNumeric:processed!==null?(tempMode?signed16(processed)*TEMPERATURE_C_PER_COUNT:processed*HEATER_MA_PER_COUNT):null,
+        sensorUnit:tempMode?'°C':'mA',
+        activePoint:(processed!==null&&count!==null&&thresholds&&corrections&&curveSteps!==null)?{sensorNumeric:(tempMode?signed16(processed)*TEMPERATURE_C_PER_COUNT:processed*HEATER_MA_PER_COUNT),sensorDisplay:sensorValue(processed,tempMode),correctionHz:curveSteps*DDS_LSB_HZ,correctionDisplay:signedHz(curveSteps*DDS_LSB_HZ)}:null,
+        activePoints:calibrationPoints===null?null:count,points:calibrationPoints,tempMode},
+      misc:{cpldConfiguration:cfg&&cfg.length===3?'0x'+hex2(cpldPortBValue(cfg[0],cfg[1])):'N/A',userText}
+    };
+  }
+
+  // One transport/session per connection. Reader tasks, RX buffers and command
+  // queues never follow mutable globals onto a replacement serial port (F7).
+  let port=null,readError=null,stopRequested=false,scanning=false,scanPromise=null;
+  let currentSession=null,cleanupPromise=null,connecting=false;
+  let deviceWritesBlocked=false; // Set when a write may have reached a device but recovery is incomplete.
+  let results=new Map(),diagnostics=new Map();
+  // One configured EEPROM base-word pair per device session. Reconstruct it
+  // from a stable snapshot or adopt the exact bytes after a verified 0x21 write.
+  let configuredDDSRecovery=null;
+  let runtimeCurveEnabled=null;
+  const COMMAND_HISTORY_LIMIT=100;
+  const SETTER_NAMES=new Map([
+    [0x21,'DDS high / low'],[0x2C,'Save output offset'],[0x2E,'Apply output offset'],
+    [0x3A,'Frequency offset limit'],[0x3C,'Offset divisor'],
+    [0x46,'Calibration configuration'],[0x58,'Calibration corrections'],
+    [0x5D,'Calibration thresholds'],[0x60,'Serial number'],[0x64,'Calibration point count'],
+    ...USER_TEXT.map(([,setter],i)=>[setter,`User text ${i+1}`])
+  ]);
+  let commandHistory=[];
+  let privateOperationHistory=false;
+  let toastTimer=null,liveTimer=null,liveBusy=false;
+  const LIVE_HISTORY_MS=5*60*1000; // Five minutes of active Dashboard time.
+  const LIVE_MINUTE_MS=60*1000;
+  let liveMinuteMarks=[],nextLiveMinuteMarkMs=null;
+  let liveSamples=[],liveLabel='Heater current',liveUnit='mA',liveChartSize='';
+  // Chart time advances only while the Dashboard is active.
+  let liveActiveElapsedMs=0,liveActiveStartedAt=null;
+
+  function assertSession(session){
+    if(!session||session!==currentSession||session.closing||session.error||
+       stopRequested||port!==session.port||!session.port.writable)
+      throw Error('Serial session changed or is not ready');
+  }
+  function notifyReceiver(session=currentSession){
+    if(!session)return;
+    const wake=session.wake;session.wake=null;if(wake)wake();
+  }
+  async function closeSerialSession(session){
+    if(!session||session.closeTask)return session?.closeTask;
+    session.closing=true;
+    session.ready=false;
+    notifyReceiver(session);
+    session.closeTask=(async()=>{
+      try{if(session.reader)await session.reader.cancel();}catch{}
+      try{if(session.readerTask)await session.readerTask;}catch{}
+      try{await session.port.close();}catch{}
+    })();
+    return session.closeTask;
+  }
+  // Count consecutive failed UART commands per connection.
+  function noteCommandSuccess(session){
+    if(session===currentSession&&!session.closing)
+      session.consecutiveCommandFailures=0;
+  }
+  function noteCommandFailure(session,error){
+    if(session!==currentSession||session.closing)return;
+    if(++session.consecutiveCommandFailures>=3){
+      const reason='Disconnected after 3 consecutive failed UART commands';
+      void retireSession(session,reason+': '+(error.message||String(error)));
+      toast(reason+'.');
+    }
+  }
+  function retireSession(session,reason='Serial device disconnected'){
+    if(!session)return Promise.resolve();
+    if(currentSession===session){
+      session.error=Error(reason);
+      session.closing=true;
+      session.ready=false;
+      readError=session.error;
+      stopRequested=true;
+      stopLivePolling();
+      notifyReceiver(session);
+      currentSession=null;port=null;
+      setStatus('error','Serial connection lost',reason);
+      updateControls();updateAdjustControls();
+    }
+    const task=closeSerialSession(session);
+    const tracked=Promise.resolve(task).finally(()=>{
+      if(cleanupPromise===tracked)cleanupPromise=null;
+    });
+    cleanupPromise=tracked;
+    return tracked;
+  }
+  async function readPump(session){
+    let fault=null;
+    try{
+      while(!session.closing && session.port.readable){
+        const reader=session.port.readable.getReader();session.reader=reader;
+        try{
+          while(!session.closing){
+            const {value,done}=await reader.read();
+            if(done)break;
+            if(value&&value.length){
+              for(const byte of value)session.queue.push(byte);
+              notifyReceiver(session);
+            }
+          }
+        }finally{
+          if(session.reader===reader)session.reader=null;
+          try{reader.releaseLock();}catch{}
+        }
+        if(!session.port.readable||session.closing)break;
+      }
+      if(!session.closing)fault=Error('Serial device disconnected');
+    }catch(error){if(!session.closing)fault=error;}
+    finally{
+      if(fault && currentSession===session){
+        session.error=fault;
+        notifyReceiver(session);
+        void retireSession(session,fault.message||String(fault));
+      }else notifyReceiver(session);
+    }
+  }
+  async function readExact(count,timeout=TIMEOUT_MS,session=currentSession){
+    if(!session)throw Error('No serial session');
+    const deadline=performance.now()+timeout;
+    while(session.queue.length<count){
+      assertSession(session);
+      const remaining=deadline-performance.now();
+      if(remaining<=0)throw Error('No response from device');
+      await new Promise(resolve=>{
+        const wake=()=>{clearTimeout(timer);if(session.wake===wake)session.wake=null;resolve();};
+        const timer=setTimeout(wake,remaining);
+        session.wake=wake;
+      });
+    }
+    assertSession(session);
+    return Uint8Array.from(session.queue.splice(0,count));
+  }
+  // One entry per UART command, including settings writes and adjustment setters.
+  // NVRAM routines suppress ALL their commands, payloads, acknowledgements and
+  // recovery reads; they contribute only one explicit invocation event.
+  function addCommandHistory(command,kind,request){
+    if(privateOperationHistory)return null;
+    const entry={time:new Date().toLocaleTimeString('en-GB',{hour12:false}),
+      command:'0x'+hex2(command),kind,
+      label:kind==='Getter'?(ALLOWED.get(command)?.name||'Unknown read'):
+        (SETTER_NAMES.get(command)||'Write command'),
+      result:'Pending',request:Uint8Array.from(request),response:null,error:''};
+    commandHistory.push(entry);
+    if(commandHistory.length>COMMAND_HISTORY_LIMIT)commandHistory.shift();
+    if(activePage==='log')renderCommandHistory();
+    return entry;
+  }
+  function updateCommandHistory(entry,result,response=null,error=''){
+    if(!entry)return;
+    entry.result=result;entry.response=response?Uint8Array.from(response):null;entry.error=error;
+    if(activePage==='log')renderCommandHistory();
+  }
+  function beginPrivateOperationHistory(name){
+    privateOperationHistory=true;
+    commandHistory.push({time:new Date().toLocaleTimeString('en-GB',{hour12:false}),
+      command:'—',kind:'NVRAM',label:name,result:'Invoked',request:null,response:null,error:''});
+    if(commandHistory.length>COMMAND_HISTORY_LIMIT)commandHistory.shift();
+    if(activePage==='log')renderCommandHistory();
+  }
+  function endPrivateOperationHistory(){privateOperationHistory=false;}
+  function renderCommandHistory(){
+    const tbody=$('commandLogRows');
+    if(!commandHistory.length){
+      tbody.innerHTML='<tr class="empty-row"><td colspan="5">No commands yet</td></tr>';
+      return;
+    }
+    tbody.innerHTML=commandHistory.slice().reverse().map(entry=>{
+      const label=escapeHtml(entry.label);
+      const rowKind=entry.kind==='Getter'?'getter':entry.kind==='Setter'?'setter':'';
+      const pill=entry.result==='Error'?'<span class="pill error">Error</span>':
+        `<span class="pill">${escapeHtml(entry.result)}</span>`;
+      const data=entry.kind==='NVRAM'?`${escapeHtml(entry.label)} invoked`:
+        `TX: ${escapeHtml(hexBytes(entry.request))}`+
+        (entry.response?`<div class="packet-response">RX: ${escapeHtml(hexBytes(entry.response))}</div>`:'')+
+        (entry.error?`<div class="packet-error">${escapeHtml(entry.error)}</div>`:'');
+      return `<tr class="${rowKind}"><td>${escapeHtml(entry.time)}</td><td>${escapeHtml(entry.command)}</td>`+
+        `<td>${label}</td><td>${pill}</td><td>${data}</td></tr>`;
+    }).join('');
+  }
+  async function readFieldRaw(command,session=currentSession,options={}){
+    assertSession(session);
+    const {quiet=false,deadline=null}=options;
+    const responseTimeout=()=>deadline===null?TIMEOUT_MS:Math.max(1,deadline-performance.now());
+    if(!ALLOWED.has(command))throw readOnlyError(command);
+    // Web Serial has no OS-level input flush; clear our buffered pre-request bytes.
+    session.queue.length=0;
+    const request=requestFrame(command);
+    const entry=quiet?null:addCommandHistory(command,'Getter',request);
+    const received=[];
+    try{
+      const writer=session.port.writable.getWriter();
+      try{
+        await writer.write(request);
+        assertSession(session);
+      }finally{writer.releaseLock();}
+      const header=await readExact(4,responseTimeout(),session);
+      received.push(...header);
+      const [code,lo,hi,checksum]=header;
+      const length=lo+(hi<<8);
+      if(code!==command||checksum!==xorBytes(header.slice(0,3)))throw Error('Invalid response');
+      if(length<4||length>256||length===5)throw Error('Invalid response size');
+      const body=await readExact(length-4,responseTimeout(),session);
+      received.push(...body);
+      let payload;
+      if(body.length===0)payload=new Uint8Array(0);
+      else{
+        if(xorBytes(body.slice(0,-1))!==body[body.length-1])throw Error('Invalid response checksum');
+        payload=body.slice(0,-1);
+      }
+      validateField(command,payload);
+      const response=Uint8Array.from(received);
+      updateCommandHistory(entry,'OK',response);
+      if(!quiet)noteCommandSuccess(session);
+      return {payload,response};
+    }catch(error){
+      updateCommandHistory(entry,'Error',received.length?Uint8Array.from(received):null,
+        error.message||String(error));
+      if(!quiet)noteCommandFailure(session,error);
+      throw error;
+    }
+  }
+  // Per-session UART serialization: queued work cannot run on a newer port.
+  function withSerialLock(task){
+    const session=currentSession;
+    if(!session)return Promise.reject(Error('Serial port not ready'));
+    const next=session.serialTail.then(async()=>{
+      assertSession(session);
+      return task(session);
+    });
+    session.serialTail=next.catch(()=>{});
+    return next;
+  }
+  function readField(command){return withSerialLock(session=>readFieldRaw(command,session));}
+  // On Connect, wait up to twenty seconds for a valid application 0x2D reply.
+  // These expected startup timeouts do not count toward the 3-command failure
+  // rule or flood the communication log. The normal scan starts only afterward.
+  async function waitForDeviceReady(session){
+    const deadline=performance.now()+CONNECT_READY_TIMEOUT_MS;
+    let lastError=null;
+    while(performance.now()<deadline){
+      assertSession(session);
+      const attemptDeadline=Math.min(deadline,performance.now()+CONNECT_PROBE_MS);
+      try{
+        const reply=await withSerialLock(lockedSession=>{
+          if(lockedSession!==session)throw Error('Serial session changed during startup');
+          return readFieldRaw(0x2D,session,{quiet:true,deadline:attemptDeadline});
+        });
+        assertSession(session);
+        return reply;
+      }catch(error){
+        assertSession(session);
+        lastError=error;
+      }
+      const remaining=deadline-performance.now();
+      if(remaining>0)await delay(Math.min(120,remaining));
+    }
+    throw Error('No valid 0x2D response within 20 seconds'+
+      (lastError?` (${lastError.message||String(lastError)})`:''));
+  }
+  // Track each getter for Dashboard data and scan-completion checks.
+  function recordOk(command,{payload}){
+    results.set(command,payload);
+    diagnostics.set(command,{ok:true});
+    if(command===0x47 && payload.length===3)runtimeCurveEnabled=Boolean(payload[0]&0x01);
+  }
+  function recordFail(command,keepValue=false){
+    if(!keepValue)results.set(command,null);
+    if(command===0x47&&!keepValue)runtimeCurveEnabled=null;
+    diagnostics.set(command,{ok:false});
+  }
+  // Setter attempts are logged as a single command, not separate TX/RX rows.
+  async function transmit(session,command,packet){
+    const entry=addCommandHistory(command,'Setter',packet);
+    session.queue.length=0;
+    let writer=null;
+    try{
+      writer=session.port.writable.getWriter();
+      await writer.write(packet);assertSession(session);
+      updateCommandHistory(entry,'Sent');
+      noteCommandSuccess(session);
+      return entry;
+    }catch(error){
+      updateCommandHistory(entry,'Error',null,error.message||String(error));
+      noteCommandFailure(session,error);
+      throw error;
+    }finally{if(writer)writer.releaseLock();}
+  }
+
+  const bytesBE=(value,count)=>Uint8Array.from(Array.from({length:count},(_,i)=>Number((BigInt(value)>>BigInt((count-i-1)*8))&255n)));
+  function rawOffsetPayload(raw){
+    if(raw< -2147483648n || raw>2147483647n)throw Error('Offset outside signed 32-bit range');
+    return bytesBE(BigInt.asUintN(32,raw),4);
+  }
+  function offsetCommandFrame(command,raw){
+    if(command!==0x2C && command!==0x2E)throw Error('Unsupported adjustment command');
+    return encodeFrame(command,rawOffsetPayload(raw));
+  }
+  async function writeOffsetRaw(command,raw,session=currentSession){
+    assertSession(session);
+    const entry=await transmit(session,command,offsetCommandFrame(command,raw));
+    // A command reply is not required by the offset handoff. Wait briefly to
+    // consume an optional header before issuing the authoritative 0x2D readback.
+    try{
+      const header=await readExact(4,220,session);
+      const len=header[1]+(header[2]<<8);
+      if(header[0]!==command||header[3]!==xorBytes(header.slice(0,3))||len<4||len>256)
+        throw Error('Unexpected adjustment reply');
+      const body=len>4?await readExact(len-4,400,session):new Uint8Array(0);
+      const reply=Uint8Array.from([...header,...body]);
+      if(body.length && xorBytes(body.slice(0,-1))!==body[body.length-1])
+        throw Error('Invalid adjustment reply checksum');
+      updateCommandHistory(entry,'ACK',reply);
+    }catch(error){
+      if(error.message!=='No response from device'){
+        updateCommandHistory(entry,'Sent',null,'Optional reply: '+(error.message||String(error)));
+        noteCommandFailure(session,error);
+      }
+    }
+    session.queue.length=0;
+  }
+
+  function setStatus(mode,title,detail){
+    const button=$('connectBtn');
+    button.title=detail?`${title} — ${detail}`:title;
+  }
+  function updateControls(){
+    const supported=('serial' in navigator)&&window.isSecureContext;
+    const button=$('connectBtn');
+    const connected=Boolean(port)&&!readError&&Boolean(currentSession?.ready);
+    button.textContent=connected?'Connected':connecting?'Connecting…':'Connect';
+    button.classList.toggle('connected',connected);
+    button.disabled=!supported||Boolean(port)||scanning||connecting||(typeof Settings!=='undefined'&&Settings.isBusy());
+    button.setAttribute('aria-label',connected?'Connected to DDS60':'Connect to DDS60');
+    if(typeof Settings!=='undefined')Settings.updateControls();
+  }
+  function toast(message){
+    const box=$('toast');box.textContent=message;box.classList.add('visible');
+    clearTimeout(toastTimer);toastTimer=setTimeout(()=>box.classList.remove('visible'),4200);
+  }
+  function set(id,text){$(id).textContent=text??'N/A';}
+  function resumeLiveClock(){
+    if(activePage==='dashboard' && liveActiveStartedAt===null)liveActiveStartedAt=Date.now();
+  }
+  function pauseLiveClock(){
+    if(liveActiveStartedAt===null)return;
+    liveActiveElapsedMs+=Math.max(0,Date.now()-liveActiveStartedAt);
+    liveActiveStartedAt=null;
+  }
+  function liveClockMs(){
+    return liveActiveElapsedMs+(liveActiveStartedAt===null?0:Math.max(0,Date.now()-liveActiveStartedAt));
+  }
+  function resetLiveSamples(){
+    liveSamples=[];
+    liveMinuteMarks=[];
+    nextLiveMinuteMarkMs=null;
+    liveActiveElapsedMs=0;
+    liveActiveStartedAt=null;
+    liveLabel='Heater current';
+    liveUnit='mA';
+    renderLiveChart();
+  }
+  function appendLiveSample(value,label,unit,display){
+    if(activePage!=='dashboard')return;
+    liveLabel=label||liveLabel;
+    liveUnit=unit||liveUnit;
+    resumeLiveClock();
+    const activeMs=liveClockMs();
+    // Minute markers measure Dashboard-active time from the first chart sample.
+    // Pausing Dashboard also pauses this clock, so navigating away adds no marks.
+    if(nextLiveMinuteMarkMs===null)nextLiveMinuteMarkMs=activeMs+LIVE_MINUTE_MS;
+    while(activeMs>=nextLiveMinuteMarkMs){
+      liveMinuteMarks.push(nextLiveMinuteMarkMs);
+      nextLiveMinuteMarkMs+=LIVE_MINUTE_MS;
+    }
+    const sample={activeMs,value,display:display||'N/A'};
+    liveSamples.push(sample);
+    // Keep a true five-minute history even when UART polls run slower than 1 Hz.
+    const cutoff=activeMs-LIVE_HISTORY_MS;
+    while(liveSamples.length&&liveSamples[0].activeMs<cutoff)liveSamples.shift();
+    while(liveMinuteMarks.length&&liveMinuteMarks[0]<=cutoff)liveMinuteMarks.shift();
+    renderLiveChart();
+  }
+  function renderLiveChart(){
+    set('liveTitle',liveLabel);
+    set('liveUnit',liveUnit);
+    const box=$('liveChart');
+    const horizon=liveClockMs();
+    const points=liveSamples.filter(p=>p.activeMs>=horizon-LIVE_HISTORY_MS &&
+      typeof p.value==='number' && Number.isFinite(p.value));
+    if(!points.length){
+      box.innerHTML='<div class="chart-empty">Live data unavailable</div>';
+      return;
+    }
+    // Match the Calibration curve's responsive chart sizing. A fixed-size
+    // viewBox used to letterbox the plot vertically in its half-height card.
+    const size=box.getBoundingClientRect();
+    const W=size.width>=200?Math.round(size.width):620;
+    const H=size.height>=40?Math.round(size.height):210;
+    liveChartSize=`${W}x${H}`;
+    const L=44,R=12,T=12,B=28;
+    const values=points.map(p=>p.value);
+    const low=Math.min(...values),high=Math.max(...values);
+    const pad=high>low?(high-low)*.15:Math.max(Math.abs(high)*.05,.1);
+    // Heater-current axis labels never extend below zero. For a negative
+    // alternate sensor value, keep its dot on the zero baseline.
+    const yMin=Math.max(0,low-pad);
+    const yMax=Math.max(yMin+.1,high+pad);
+    // A fixed five-minute time axis positions the first sample on the right.
+    // New readings shift older samples left, regardless of UART poll jitter.
+    const timeToX=t=>L+(t-horizon+LIVE_HISTORY_MS)/LIVE_HISTORY_MS*(W-L-R);
+    const toX=p=>timeToX(p.activeMs);
+    const toY=v=>H-B-(Math.max(yMin,Math.min(yMax,v))-yMin)/(yMax-yMin)*(H-T-B);
+    const yGrid=Array.from({length:4},(_,i)=>{
+      const y=T+i*(H-T-B)/3,val=yMax-i*(yMax-yMin)/3;
+      return `<line x1="${L}" y1="${y}" x2="${W-R}" y2="${y}" stroke="#253951" stroke-width="1" stroke-dasharray="3 6"/><text x="${L-8}" y="${y+4}" fill="#8da3bb" text-anchor="end" font-size="10">${escapeHtml(Math.max(0,val).toFixed(1))}</text>`;
+    }).join('');
+    const minuteLines=liveMinuteMarks.filter(t=>t>horizon-LIVE_HISTORY_MS&&t<=horizon)
+      .map(t=>`<line class="minute-marker" x1="${timeToX(t).toFixed(2)}" y1="${T}" x2="${timeToX(t).toFixed(2)}" y2="${H-B}" stroke="#253951" stroke-width="1" stroke-dasharray="3 6"/>`).join('');
+    const coords=points.map(p=>`${toX(p).toFixed(2)},${toY(p.value).toFixed(2)}`).join(' ');
+    const fill=points.length>1?`<polygon class="heater-fill" points="${toX(points[0]).toFixed(2)},${H-B} ${coords} ${toX(points[points.length-1]).toFixed(2)},${H-B}" fill="url(#heaterFill)"/>`:'';
+    const trace=points.length>1?`<polyline class="heater-trace" points="${coords}" fill="none" stroke="#88acff" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>`:'';
+    const dots=points.map(p=>`<circle cx="${toX(p).toFixed(2)}" cy="${toY(p.value).toFixed(2)}" r="1.7" fill="#88acff" stroke="#122338" stroke-width="0.7"><title>${escapeHtml(p.display)}</title></circle>`).join('');
+    box.innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${escapeHtml(liveLabel)} history"><defs><linearGradient id="heaterFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#88acff" stop-opacity=".23"/><stop offset="100%" stop-color="#88acff" stop-opacity="0"/></linearGradient></defs>${fill}${yGrid}${minuteLines}<line x1="${L}" y1="${H-B}" x2="${W-R}" y2="${H-B}" stroke="#425675"/><text x="${L}" y="${H-11}" fill="#8da3bb" font-size="10">-5 min</text><text x="${W-R}" y="${H-11}" fill="#8da3bb" text-anchor="end" font-size="10">now</text>${trace}${dots}</svg>`;
+  }
+  if(typeof ResizeObserver==='function'){
+    new ResizeObserver(()=>{
+      const r=$('liveChart').getBoundingClientRect();
+      if(liveSamples.length&&`${Math.round(r.width)}x${Math.round(r.height)}`!==liveChartSize)renderLiveChart();
+    }).observe($('liveChart'));
+  }
+  function updateLivePanel(report){
+    // Never redraw the chart or seed it from a scan completed on another page.
+    if(!report||activePage!=='dashboard')return;
+    set('liveTitle',report.calibration.sensorName);
+    set('liveUnit',report.calibration.sensorUnit||'');
+    const currentDisplay=report.calibration.sensorReading||'N/A';
+    if(!liveSamples.length && report.calibration.sensorNumeric!==null){
+      appendLiveSample(report.calibration.sensorNumeric, report.calibration.sensorName, report.calibration.sensorUnit, currentDisplay);
+    }else renderLiveChart();
+  }
+  function startLivePolling(){
+    if(liveTimer||!currentSession?.ready||!port||readError||stopRequested||scanning||activePage!=='dashboard'||Settings.isBusy())return;
+    if(liveSamples.length)resumeLiveClock();
+    liveTimer=setInterval(()=>{ void pollLiveSensor(); },1000);
+  }
+  function stopLivePolling(){
+    if(liveTimer){clearInterval(liveTimer);liveTimer=null;}
+    pauseLiveClock();
+  }
+  async function pollLiveSensor(){
+    if(!currentSession?.ready||!port||scanning||stopRequested||readError||liveBusy||adjustBusy||activePage!=='dashboard')return;
+    const session=currentSession;
+    liveBusy=true;
+    try{
+      // Actual working DDS words can change independently of the fresh sensor
+      // reading, so poll 0x22 rather than extrapolating last-used corrections.
+      for(const command of [0x53,0x22,0x67]){
+        if(session!==currentSession||!port||stopRequested||readError||activePage!=='dashboard'||Settings.isBusy())break;
+        try{
+          const reply=await readField(command);
+          // A read already in flight can finish after leaving Dashboard.
+          // Do not update cached values or chart samples once the page changed.
+          if(session!==currentSession||activePage!=='dashboard')break;
+          recordOk(command,reply);
+          const report=buildReport(results);
+          renderReport(report);
+          if(command===0x53 && report.calibration.sensorNumeric!==null){
+            appendLiveSample(report.calibration.sensorNumeric,report.calibration.sensorName,
+              report.calibration.sensorUnit,report.calibration.sensorReading);
+          }
+        }catch(error){
+          // Keep last valid values; command history records read failures.
+          if(session!==currentSession)break;
+          recordFail(command,true);
+        }
+      }
+    }finally{
+      liveBusy=false;
+    }
+  }
+  function renderReport(report){
+    const {identity,frequencies,calibration,misc}=report;
+    Object.entries({
+      fwValue:identity.firmware,serialValue:identity.serialNumber,uptimeValue:identity.operatingTime,
+      configuredCenterValue:frequencies.configuredCenter,spanValue:frequencies.configuredSpan,
+      currentCenterValue:frequencies.currentCenter,correctionValue:frequencies.calibrationCorrection,
+      analogStateValue:frequencies.analogCalibrationState,digitalOffsetValue:frequencies.digitalCalibrationOffset,
+      offsetLimitsValue:frequencies.offsetLimits,
+      calibrationStateValue:calibration.calibration,sourceValue:calibration.source,averagingValue:calibration.averaging,
+      sensorRowLabel:calibration.sensorName,sensorValue:calibration.sensorReading,
+      cpldValue:misc.cpldConfiguration
+    }).forEach(([id,text])=>set(id,text));
+    // Highlight only measured/polled values; leave labels and N/A neutral.
+    for(const id of ['uptimeValue','sensorValue','currentCenterValue','correctionValue']){
+      const el=$(id);
+      el.classList.toggle('live-value',!el.textContent.startsWith('N/A'));
+    }
+    $('currentCenterValue').title='Latest 0x22 effective DDS working-RAM values; not an AD9832 readback or raw NVRAM.';
+    $('digitalOffsetValue').title='Calculated by UART 0x3E now; this may differ from the correction last applied during DDS programming.';
+    $('correctionValue').title='Curve estimate for the latest sensor reading: exact endpoint correction beyond the table, signed truncated interpolation between points. The firmware may still retain an earlier correction until its next DDS rebuild.';
+    misc.userText.forEach((text,i)=>set('usertext'+(i+1),text));
+    renderCalibration(calibration);
+    updateLivePanel(report);
+  }
+  function renderCalibration(cal){
+    const points=cal.points;
+    set('thresholdHeader',cal.sensorName);
+    const tbody=$('calibrationTable');
+    if(points===null){tbody.innerHTML='<tr class="empty-row"><td colspan="3">Calibration data unavailable</td></tr>';}
+    else if(!points.length){tbody.innerHTML='<tr class="empty-row"><td colspan="3">No active calibration points</td></tr>';}
+    else{tbody.innerHTML=points.map(p=>`<tr><td>${p.point}</td><td>${escapeHtml(p.sensorDisplay)}</td><td>${escapeHtml(p.correctionDisplay)}</td></tr>`).join('');}
+    renderChart(points,cal.tempMode,cal.activePoint);
+  }
+  let chartArgs=null,chartSize='';
+  function renderChart(points,tempMode,activePoint){
+    chartArgs=[points,tempMode,activePoint];
+    const box=$('calibrationChart');
+    if(!points||points.length===0){box.innerHTML=`<div class="chart-empty">${points?'No active correction points':'Calibration data unavailable'}</div>`; return;}
+    // Plot in mHz. Symmetric zero-centred bounds keep the zero reference visible
+    // regardless of whether all corrections are positive or all are negative.
+    const size=box.getBoundingClientRect();
+    const W=size.width>=200?Math.round(size.width):620,H=size.height>=120?Math.round(size.height):210,R=12,T=12,B=28;
+    chartSize=`${W}x${H}`;
+    const xs=points.map(p=>p.sensorNumeric), ys=points.map(p=>p.correctionHz*1000);
+    let xMin=Math.min(...xs),xMax=Math.max(...xs);
+    const activeY=activePoint?activePoint.correctionHz*1000:null;
+    const peak=Math.max(0,...ys.map(Math.abs),...(activeY===null?[]:[Math.abs(activeY)]));
+    // Grid lines every 25 mHz, with one extra grid step beyond the data.
+    const tickStep=25, halfTicks=Math.max(1,Math.ceil(peak/tickStep)+1);
+    const yMin=-halfTicks*tickStep,yMax=halfTicks*tickStep;
+    if(activePoint){xMin=Math.min(xMin,activePoint.sensorNumeric);xMax=Math.max(xMax,activePoint.sensorNumeric);}
+    if(xMax===xMin){xMin-=1;xMax+=1;}else{const pad=(xMax-xMin)*.08;xMin-=pad;xMax+=pad;}
+    // Keep 25 mHz grid lines but label the vertical axis in 50 mHz steps.
+    // At extreme ranges, skip labels in multiples of 50 mHz to avoid overlap.
+    const tickSpacing=(H-T-B)/(halfTicks*2);
+    const labelStride=2*Math.max(1,Math.ceil(20/(2*tickSpacing)));
+    const labelTicks=[];
+    for(let k=-Math.floor(halfTicks/labelStride)*labelStride;k<=halfTicks;k+=labelStride)labelTicks.push(k);
+    const labelW=t=>[...t].reduce((a,c)=>a+(c>='0'&&c<='9'?6.2:c==='-'?3.8:3.2),0);
+    const L=Math.ceil(Math.max(...labelTicks.map(k=>labelW(String(k*tickStep)))))+14;
+    const toX=x=>L+(x-xMin)/(xMax-xMin)*(W-L-R);
+    const toY=mhz=>H-B-(mhz-yMin)/(yMax-yMin)*(H-T-B);
+    const zeroY=toY(0);
+    const ordered=points.map(p=>`${toX(p.sensorNumeric).toFixed(2)},${toY(p.correctionHz*1000).toFixed(2)}`).join(' ');
+    // For large ranges, a repeated SVG pattern keeps the number of DOM nodes
+    // bounded while retaining the exact 25 mHz grid interval.
+    const gridWidth=W-L-R;
+    const yGrid=`<pattern id="calibration25mHzGrid" x="${L}" y="${zeroY.toFixed(4)}" width="${gridWidth}" height="${tickSpacing.toFixed(6)}" patternUnits="userSpaceOnUse"><path d="M0 0 H${gridWidth}" stroke="#253951" stroke-width="1" stroke-dasharray="3 6" fill="none"/></pattern><rect x="${L}" y="${T}" width="${gridWidth}" height="${H-T-B}" fill="url(#calibration25mHzGrid)"/>`;
+    const yLabels=labelTicks.map(k=>`<text x="${L-10}" y="${(toY(k*tickStep)+4).toFixed(2)}" fill="${k===0?'#adcae5':'#8da3bb'}" text-anchor="end" font-size="10">${k*tickStep}</text>`).join('');
+    const dots=points.map(p=>`<circle cx="${toX(p.sensorNumeric).toFixed(2)}" cy="${toY(p.correctionHz*1000).toFixed(2)}" r="4.5" fill="#7be9da" stroke="#122338" stroke-width="2"><title>${escapeHtml(p.sensorDisplay)} / ${escapeHtml(p.correctionDisplay)}</title></circle>`).join('');
+    const activeSvg=activePoint?`<line x1="${toX(activePoint.sensorNumeric).toFixed(2)}" y1="${T}" x2="${toX(activePoint.sensorNumeric).toFixed(2)}" y2="${H-B}" stroke="#f8c57d" stroke-width="1.5" stroke-dasharray="5 5"/><circle cx="${toX(activePoint.sensorNumeric).toFixed(2)}" cy="${toY(activeY).toFixed(2)}" r="6" fill="#f8c57d" stroke="#122338" stroke-width="2.5"><title>Active: ${escapeHtml(activePoint.sensorDisplay)} / ${escapeHtml(activePoint.correctionDisplay)}</title></circle>`:'';
+    // Tick marks every 50 mA (10 °C in temperature mode); no label for 0. Falls back to min/max labels if no tick fits.
+    const unit=tempMode?'°C':'mA';
+    let step=tempMode?10:50;while((xMax-xMin)/step>14)step*=2;
+    const ticks=[];for(let v=Math.ceil(xMin/step)*step;v<=xMax;v+=step)ticks.push(v);
+    const lastLabeled=ticks.filter(v=>v!==0).pop();
+    const xAxis=ticks.length
+      ?ticks.map(v=>{const x=toX(v).toFixed(2);return `<line x1="${x}" y1="${H-B}" x2="${x}" y2="${H-B+5}" stroke="#425675" stroke-width="1"/>`+(v===0?'':`<text x="${x}" y="${H-11}" fill="#8da3bb" text-anchor="${v===lastLabeled&&toX(v)>W-24?'end':'middle'}" font-size="10">${v}${v===lastLabeled?' '+unit:''}</text>`);}).join('')
+      :`<text x="${L}" y="${H-11}" fill="#8da3bb" font-size="10">${escapeHtml(fmtNumber(xMin,tempMode?1:0))}</text><text x="${W-R}" y="${H-11}" fill="#8da3bb" text-anchor="end" font-size="10">${escapeHtml(fmtNumber(xMax,tempMode?1:0))} ${unit}</text>`;
+    box.innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Calibration curve in millihertz for ${points.length} points">
+      <defs><linearGradient id="curveFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#69e8d9" stop-opacity=".23"/><stop offset="100%" stop-color="#69e8d9" stop-opacity="0"/></linearGradient></defs>
+      ${yGrid}${yLabels}
+      <line x1="${L}" y1="${H-B}" x2="${W-R}" y2="${H-B}" stroke="#425675" stroke-width="1"/>
+      ${xAxis}
+      ${points.length>1?`<polygon points="${toX(points[0].sensorNumeric).toFixed(2)},${zeroY.toFixed(2)} ${ordered} ${toX(points[points.length-1].sensorNumeric).toFixed(2)},${zeroY.toFixed(2)}" fill="url(#curveFill)"/>`:''}
+      <line x1="${L}" y1="${zeroY.toFixed(2)}" x2="${W-R}" y2="${zeroY.toFixed(2)}" stroke="#88acff" stroke-width="1"/>
+      <polyline points="${ordered}" fill="none" stroke="#69e8d9" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+      ${dots}${activeSvg}</svg>`;
+  }
+  if(typeof ResizeObserver==='function'){
+    new ResizeObserver(()=>{
+      const r=$('calibrationChart').getBoundingClientRect();
+      if(chartArgs&&chartArgs[0]&&chartArgs[0].length&&`${Math.round(r.width)}x${Math.round(r.height)}`!==chartSize)renderChart(...chartArgs);
+    }).observe($('calibrationChart'));
+  }
+  async function captureConfiguredDDSSnapshot(session,settingsInputs=null){
+    configuredDDSRecovery=null;
+    try{
+      assertSession(session);
+      // Direct connections to Settings do not run a Dashboard scan. Supply
+      // 0x47/0x65/0x57/0x59 from Settings so both entry paths reconstruct
+      // exactly the same base-word pair.
+      const snapshot=new Map(results);
+      if(settingsInputs){
+        for(const command of [0x47,0x65,0x57,0x59]){
+          const payload=settingsInputs.get(command);
+          if(payload instanceof Uint8Array)snapshot.set(command,payload);
+        }
+        const cfg=snapshot.get(0x47);
+        if(cfg?.length===3)runtimeCurveEnabled=Boolean(cfg[0]&0x01);
+      }
+      const first=(await readField(0x22)).payload;
+      assertSession(session);
+      const digital=(await readField(0x3E)).payload;
+      assertSession(session);
+      const sensor=(await readField(0x53)).payload;
+      assertSession(session);
+      const last=(await readField(0x22)).payload;
+      assertSession(session);
+      // Always use the latest actual working words for Current DDS center.
+      recordOk(0x22,{payload:last});
+      recordOk(0x3E,{payload:digital});
+      recordOk(0x53,{payload:sensor});
+      snapshot.set(0x22,last);snapshot.set(0x3E,digital);snapshot.set(0x53,sensor);
+      if(first.length!==last.length||first.some((v,i)=>v!==last[i])){
+        configuredDDSRecovery={display:'N/A (DDS changing)',
+          note:'0x22 changed during reconstruction; cannot associate correction inputs with one effective DDS image. '+RECOVERY_NOTE};
+      }else{
+        configuredDDSRecovery=configuredDDSCandidate(snapshot);
+      }
+    }catch(error){
+      configuredDDSRecovery={display:'N/A (snapshot failed)',
+        note:'Reconstruction read failed: '+(error.message||String(error))+'. '+RECOVERY_NOTE};
+    }
+    if(session===currentSession)renderReport(buildReport(results));
+  }
+
+  async function scan(){
+    if(!currentSession?.ready||!port||scanning||readError)return;
+    const session=currentSession;
+    scanning=true;stopRequested=false;results=new Map();diagnostics=new Map();
+    // A scan requested on first Dashboard visit after connecting in Settings
+    // must not discard the configured EEPROM words captured on that page.
+    if(!configuredDDSRecovery?.words)configuredDDSRecovery=null;
+    runtimeCurveEnabled=null;
+    resetLiveSamples();
+    setStatus('reading','Reading device','Querying the approved read-only application commands.');
+    renderReport(buildReport(results));updateControls();
+    let completed=0;
+    for(const [command] of GETTERS){
+      if(session!==currentSession||stopRequested||!port||readError||activePage==='settings')break;
+      try{
+        const reply=await readField(command);
+        if(session!==currentSession)break;
+        recordOk(command,reply);
+      }catch(error){
+        if(session!==currentSession||stopRequested||!port)break;
+        recordFail(command);
+      }
+      completed++;
+      renderReport(buildReport(results));
+      syncAdjustmentFromDevice();renderAdjust();
+      
+      if(completed<GETTERS.length&&!stopRequested)await delay(BETWEEN_COMMANDS_MS);
+    }
+    if(session!==currentSession){scanning=false;updateControls();return;}
+    // Capture only if this session has no configured baseline yet. Polling,
+    // navigation and new readbacks must not replace cached EEPROM words.
+    if(!stopRequested&&activePage!=='settings'&&!configuredDDSRecovery?.words&&
+       [0x22,0x3E,0x47].every(command=>get(results,command)!==null))
+      await captureConfiguredDDSSnapshot(session);
+    if(session!==currentSession){scanning=false;updateControls();return;}
+    scanning=false;
+    const good=Array.from(diagnostics.values()).filter(d=>d.ok).length;
+    if(port&&!readError&&!stopRequested){
+      setStatus('connected',good?'Device connected':'Connected · no valid responses',
+        `${good} of ${GETTERS.length} fields read successfully${good<GETTERS.length?'. Unavailable fields show N/A.':'.'}`);
+      if(good===0)toast('No valid responses. Check power, cabling, and the selected serial port.');
+    }else if(port&&!readError){setStatus('connected','Reading stopped','The available results are retained.');}
+    updateControls();renderAdjust();
+    // A one-off scan may have started on Adjust; resume dashboard polling if
+    // the user navigated back while that scan was still in flight.
+    if(activePage==='dashboard'&&port&&!readError&&!stopRequested)startLivePolling();
+  }
+  async function connect(){
+    if(!('serial' in navigator)||!window.isSecureContext){toast('Web Serial requires a supported Chromium browser and a secure context.');return;}
+    if(port||connecting||Settings.isBusy())return;
+    connecting=true;updateControls();
+    let chosen=null,opened=false,session=null;
+    try{
+      // Do not admit a new session until the previous reader has been cancelled,
+      // its task has exited, and the previous port has been closed (F7).
+      if(cleanupPromise)await cleanupPromise;
+      if(scanPromise)await scanPromise.catch(()=>{});
+      chosen=await navigator.serial.requestPort();
+      await chosen.open({baudRate:BAUD,dataBits:8,stopBits:1,parity:'none',flowControl:'none'});
+      opened=true;
+      try{await chosen.setSignals({dataTerminalReady:false,requestToSend:false});}
+      catch(signalError){throw Error('Could not clear DTR/RTS: '+signalError.message);}
+      session={port:chosen,queue:[],wake:null,ready:false,
+        closing:false,error:null,reader:null,readerTask:null,closeTask:null,
+        consecutiveCommandFailures:0,
+        serialTail:Promise.resolve()};
+      currentSession=session;port=chosen;readError=null;stopRequested=false;
+      deviceWritesBlocked=false;runtimeCurveEnabled=null;configuredDDSRecovery=null;
+      setStatus('reading','Waiting for device','Polling 0x2D for a valid reply (20-second limit).');
+      session.readerTask=readPump(session);updateControls();
+      const readyReply=await waitForDeviceReady(session);
+      assertSession(session);
+      // The valid 0x2D value can already be used by the report. Subsequent
+      // Dashboard/Settings scans still perform their normal full readbacks.
+      recordOk(0x2D,readyReply);
+      session.ready=true;updateControls();
+      setStatus('connected','Device connected','0x2D responded. Reading device information.');
+      if(activePage==='settings')await Settings.load();
+      else{scanPromise=scan();await scanPromise;}
+      if(currentSession===session&&!readError){
+        syncAdjustmentFromDevice();renderAdjust();
+        if(activePage==='dashboard')startLivePolling();
+        else if(activePage==='adjust')void refreshAdjustReadback();
+      }
+    }catch(error){
+      if(error.name!=='NotFoundError')toast('Connection failed: '+(error.message||String(error)));
+      if(session&&currentSession===session)await retireSession(session,error.message||String(error));
+      else if(chosen&&opened){try{await chosen.close();}catch{}}
+      if(!port)setStatus('idle','Not connected','Select a serial port and try again.');
+    }finally{connecting=false;updateControls();}
+  }
+  // Adjust page: direct UI works in integer DDS counts, encoded as raw signed
+  // int32 offsets on the UART. 0x3B/0x3D provide the actual device parameters.
+  const ADJ_MCLK=20000000n, ADJ_DENOM=4294967296n, ADJ_NANO=1000000000n;
+  const ADJ_GROUP_NHZ=[1000000000n,1000000n,1000n,1n];
+  const ADJ_MULTIPLIER=10n, ADJ_BIAS=5n;
+  const ADJ_FALLBACK={divisor:457225n,limit:0xfffffffn,maxCounts:5870n}; // display-only defaults
+  const adjustGroups=Array.from(document.querySelectorAll('.digit-group'));
+  let activePage='dashboard',aboutReturnPage='dashboard',adjustRaw=0n,adjustDirty=false,adjustNegativeZero=false;
+  let adjustPreviewMultiplier=2n, adjustBusy=false;
+  const absBig=x=>x<0n?-x:x;
+  const clipBig=(x,min,max)=>x<min?min:x>max?max:x;
+  const divideRounded=(a,b)=>a<0n?-(((-a)+b/2n)/b):(a+b/2n)/b;
+  function adjustParams(){
+    const d=get(results,0x3D),l=get(results,0x3B);
+    if(!d||!l||d.length!==4||l.length!==4)return null;
+    const divisor=BigInt(signed32(d)), limit=BigInt(signed32(l));
+    if(divisor<=0n||limit<=0n||limit>0x7fffffffn)return null;
+    // Verified single-chunk scaling path for the supplied NVRAM/clamp regime.
+    if(limit>0x19999999n)return null;
+    return {divisor,limit,maxCounts:(ADJ_MULTIPLIER*limit+ADJ_BIAS)/divisor};
+  }
+  function rawToCounts(raw,p){
+    const clipped=clipBig(raw,-p.limit,p.limit);
+    if(clipped===0n)return 0n; // Keep raw zero at zero for any positive divisor (F10).
+    const magnitude=(ADJ_MULTIPLIER*absBig(clipped)+ADJ_BIAS)/p.divisor;
+    return clipped<0n?-magnitude:magnitude;
+  }
+  function countsToRaw(counts,p){
+    const q=clipBig(counts,-p.maxCounts,p.maxCounts);
+    if(!q)return 0n;
+    const minMagnitude=(absBig(q)*p.divisor-ADJ_BIAS+ADJ_MULTIPLIER-1n)/ADJ_MULTIPLIER;
+    return (q<0n?-1n:1n)*clipBig(minMagnitude,0n,p.limit);
+  }
+  function countsToNano(counts){return divideRounded(counts*ADJ_MCLK*ADJ_NANO*adjustPreviewMultiplier,ADJ_DENOM);}
+  function adjustmentParts(nhz){
+    const digits=absBig(nhz).toString().padStart(12,'0');
+    return {digits,grouped:`${digits.slice(0,3)} . ${digits.slice(3,6)} ${digits.slice(6,9)} ${digits.slice(9,12)}`,
+      negative:nhz<0n};
+  }
+  function preciseStep(){
+    const n=divideRounded(ADJ_MCLK*1000000000000n*adjustPreviewMultiplier,ADJ_DENOM);
+    return `${n/1000000000000n}.${(n%1000000000000n).toString().padStart(12,'0')} Hz`;
+  }
+  function fmtBig(n){return n.toLocaleString('en-US');}
+  function signedRawHex(n){return '0x'+BigInt.asUintN(32,n).toString(16).toUpperCase().padStart(8,'0');}
+  function updateAdjustControls(){
+    const ready=Boolean(port&&!readError&&!scanning&&!adjustBusy&&!deviceWritesBlocked&&adjustParams());
+    $('applyBtn').disabled=!ready;
+    $('saveBtn').disabled=!ready;
+  }
+  function renderAdjust(){
+    const p=adjustParams();
+    const cfg=p||ADJ_FALLBACK;
+    const count=rawToCounts(adjustRaw,cfg);
+    const parts=adjustmentParts(countsToNano(count));
+    adjustGroups.forEach((el,i)=>el.textContent=parts.digits.slice(i*3,i*3+3));
+    const negative=parts.negative || (count===0n&&adjustNegativeZero);
+    $('signButton').textContent=negative?'−':'+';
+    $('signButton').setAttribute('aria-label',negative?'Sign: negative':'Sign: positive');
+    const readback=get(results,0x2D);
+    const currentCounts=readback&&p?rawToCounts(BigInt(signed32(readback)),p):null;
+    const outputMultiplier=Number(adjustPreviewMultiplier);
+    const currentHz=currentCounts===null?null:Number(currentCounts)*DDS_LSB_HZ*outputMultiplier;
+    $('currentOffsetNumber').textContent=currentHz===null?'N/A':signedHz(currentHz);
+    const maxHz=p?Number(p.maxCounts)*DDS_LSB_HZ*outputMultiplier:null;
+    set('offsetRulerMin',maxHz===null?'N/A':'−'+fmtNumber(maxHz)+' Hz');
+    set('offsetRulerMax',maxHz===null?'N/A':'+'+fmtNumber(maxHz)+' Hz');
+    const mark=$('offsetRulerCurrent');
+    // Ruler shows the pending output-frequency adjustment. Scaling the
+    // symmetric limits and marker together keeps the correct relative position.
+    if(p && p.maxCounts>0n){
+      const pendingCounts=rawToCounts(adjustRaw,p);
+      const pendingHz=Number(pendingCounts)*DDS_LSB_HZ*outputMultiplier;
+      const fraction=Number(pendingCounts)/Number(p.maxCounts);
+      const position=Math.min(100,Math.max(0,50+fraction*50));
+      mark.style.left=position.toFixed(5)+'%';
+      mark.classList.toggle('near-min',position<8);
+      mark.classList.toggle('near-max',position>92);
+      mark.hidden=false;
+      $('offsetRulerCurrentText').textContent=signedHz(pendingHz);
+      $('offsetRuler').setAttribute('aria-label',`Selected adjustment ${signedHz(pendingHz)}, permitted range ±${fmtNumber(maxHz)} Hz at ${5*outputMultiplier} MHz output (provisional scaling)`);
+    }else{
+      mark.hidden=true;
+      $('offsetRuler').setAttribute('aria-label','Adjustment ruler unavailable until device offset limits are read');
+    }
+    set('rawMultiplierValue',ADJ_MULTIPLIER.toString());
+    set('divisorValue',p?fmtBig(p.divisor):'N/A');
+    set('outputMultiplierValue',`×${adjustPreviewMultiplier} (provisional)`);
+    set('stepCalculationValue',`20,000,000 ÷ 2³² × ${adjustPreviewMultiplier} = ${preciseStep()}`);
+    const raw=clipBig(adjustRaw,-cfg.limit,cfg.limit);
+    const canonical=countsToRaw(count,cfg);
+    $('hexOffsetValue').textContent=count===0n?`0 DDS counts → raw ${fmtBig(raw)} → ${signedRawHex(raw)}`:
+      raw===canonical
+      ?`${count<0n?'−':''}⌈(${fmtBig(absBig(count))} × ${fmtBig(cfg.divisor)} − 5) ÷ 10⌉ = ${raw<0n?'−':''}${fmtBig(absBig(raw))} → ${signedRawHex(raw)}`
+      :`⌊(10 × ${fmtBig(absBig(raw))} + 5) ÷ ${fmtBig(cfg.divisor)}⌋ = ${fmtBig(absBig(count))} DDS counts; raw ${raw<0n?'−':''}${fmtBig(absBig(raw))} → ${signedRawHex(raw)}`;
+    const currentRaw=get(results,0x2D);
+    const equivalence=(currentRaw&&p)?(()=>{
+      const currentCounts=rawToCounts(BigInt(signed32(currentRaw)),p);
+      const ddsNanos=divideRounded(currentCounts*ADJ_MCLK*ADJ_NANO,ADJ_DENOM);
+      const outputNanos=countsToNano(currentCounts);
+      const formatSignedNano=n=>{
+        const parts=adjustmentParts(n);
+        return (parts.negative?'−':'+')+parts.grouped+' Hz';
+      };
+      return `Current offset: ${formatSignedNano(ddsNanos)} at DDS × ${adjustPreviewMultiplier} (provisional) = ${formatSignedNano(outputNanos)} at selected output. `;
+    })():'';
+    $('detailNote').textContent=p?
+      `${equivalence}Firmware: ΔW = sign(raw) × ⌊(10 × |clamp(raw)| + 5) ÷ ${fmtBig(p.divisor)}⌋. Limit: ±${fmtBig(p.limit)} raw units. External output multiplier is provisional.`:
+      'Connect and read divisor (0x3D) and limit (0x3B) to enable Apply and Save. External output multiplier is provisional.';
+    updateAdjustControls();
+  }
+  function stepAdjustGroup(index,direction){
+    const p=adjustParams()||ADJ_FALLBACK;
+    const groupNano=ADJ_GROUP_NHZ[index];
+    const step=absBig(countsToNano(1n));
+    const delta=groupNano<step?1n:clipBig(divideRounded(groupNano*ADJ_DENOM,
+      ADJ_MCLK*ADJ_NANO*adjustPreviewMultiplier),1n,p.maxCounts);
+    const newCounts=clipBig(rawToCounts(adjustRaw,p)+BigInt(direction)*delta,-p.maxCounts,p.maxCounts);
+    adjustRaw=countsToRaw(newCounts,p);adjustNegativeZero=false;adjustDirty=true;
+    renderAdjust();
+    const el=adjustGroups[index];el.classList.add('wheeling');
+    clearTimeout(el.wheelHighlightTimer);el.wheelHighlightTimer=setTimeout(()=>el.classList.remove('wheeling'),180);
+  }
+  function setSelectedOutput(freq){
+    adjustPreviewMultiplier=BigInt(freq/5);
+    document.querySelectorAll('.frequency-choice').forEach(btn=>{
+      const selected=Number(btn.dataset.frequency)===freq;
+      btn.classList.toggle('selected',selected);
+      btn.setAttribute('aria-pressed',String(selected));
+    });
+    renderAdjust();
+  }
+  function syncAdjustmentFromDevice(){
+    if(adjustDirty)return;
+    const bytes=get(results,0x2D),p=adjustParams();
+    if(bytes&&p){adjustRaw=BigInt(signed32(bytes));adjustNegativeZero=false;}
+  }
+  async function refreshAdjustReadback(){
+    if(!port||readError||scanning||Settings.isBusy()||activePage==='settings')return;
+    try{
+      recordOk(0x2D,await readField(0x2D));
+      syncAdjustmentFromDevice();
+      renderReport(buildReport(results));renderAdjust();
+    }catch(error){
+      recordFail(0x2D);
+      renderReport(buildReport(results));renderAdjust();
+      toast('Current offset read failed: '+(error.message||String(error)));
+    }
+  }
+
+  // A Settings write can change essentially every Dashboard and Adjust value.
+  // Explicit refresh while Settings is busy; live polling remains stopped.
+  async function refreshOtherPagesAfterSettingsSave(){
+    // Refresh effective DDS and configuration getters, but NEVER replace a
+    // known EEPROM baseline with effective 0x22 words. The EEPROM pair only
+    // changes on a verified 0x21 write or a new device session.
+    const failures=[];
+    for(const [command] of GETTERS){
+      try{recordOk(command,await readField(command));}
+      catch(error){
+        recordFail(command);
+        failures.push('0x'+hex2(command));
+      }
+      if(command!==GETTERS[GETTERS.length-1][0])await delay(BETWEEN_COMMANDS_MS);
+    }
+    // Only attempt UART reconstruction when no trusted configured words
+    // exist (e.g. after reconnect or a failed initial snapshot).
+    if(!configuredDDSRecovery?.words&&currentSession&&
+       [0x22,0x3E,0x47].every(command=>get(results,command)!==null))
+      await captureConfiguredDDSSnapshot(currentSession);
+    adjustDirty=false;adjustNegativeZero=false;
+    syncAdjustmentFromDevice();
+    renderReport(buildReport(results));renderAdjust();
+    return failures;
+  }
+
+  // Connecting directly from Settings deliberately skips the dashboard scan, so
+  // scan on first visit if any getter is missing, then run `after` on that page.
+  function whenDashboardDataReady(page,after){
+    if(GETTERS.some(([command])=>!diagnostics.has(command))){
+      scanPromise=scan();
+      void scanPromise.then(()=>{if(activePage===page&&port&&!readError)after();});
+    }else after();
+  }
+  function selectPage(page){
+    if(!Object.hasOwn(PAGE_IDS,page))return;
+    if(Settings.isBusy()&&page!==activePage){toast('Settings operation in progress. Finish before changing screens.');return;}
+    if(page==='about'&&activePage!=='about')aboutReturnPage=activePage;
+    activePage=page;
+    // While About is open the screen it was opened from stays visible, blurred and inert behind it.
+    const behindAbout=page==='about'?aboutReturnPage:null;
+    for(const [name,sectionId] of Object.entries(PAGE_IDS)){
+      $(sectionId).hidden=page!==name&&name!==behindAbout;
+      $(sectionId).inert=name===behindAbout;
+      const menuItem=$(name+'MenuBtn');
+      menuItem.classList.toggle('active',page===name);
+      if(page===name)menuItem.setAttribute('aria-current','page');
+      else menuItem.removeAttribute('aria-current');
+    }
+    toggleMenu(false);
+    if(page==='dashboard'){
+      // Show the existing chart immediately, without waiting for the next poll.
+      updateLivePanel(buildReport(results));
+      if(currentSession?.ready&&port&&!readError&&!scanning)whenDashboardDataReady('dashboard',startLivePolling);
+    }else if(page==='adjust'){
+      stopLivePolling();
+      // Opening Adjust discards unapplied edits and reads current device offset.
+      adjustDirty=false;
+      adjustNegativeZero=false;
+      syncAdjustmentFromDevice();renderAdjust();
+      if(currentSession?.ready&&port&&!readError&&!scanning)whenDashboardDataReady('adjust',()=>{void refreshAdjustReadback();});
+    }else if(page==='settings'){
+      stopLivePolling();
+      if(currentSession?.ready)void Settings.load();
+    }else{
+      // Log and About are informational; neither initiates UART requests.
+      stopLivePolling();
+      if(page==='log')renderCommandHistory();
+    }
+  }
+  async function applyAdjustment(command){
+    if(command!==0x2C&&command!==0x2E)return;
+    const p=adjustParams();
+    if(deviceWritesBlocked){toast('Device state uncertain after a failed write; reconnect before adjusting.');return;}
+    if(!currentSession?.ready||!port||readError||scanning||adjustBusy||!p){toast('Connect and read device settings before adjusting.');return;}
+    const raw=clipBig(adjustRaw,-p.limit,p.limit);
+    adjustBusy=true;stopLivePolling();updateAdjustControls();
+    const issues=[];
+    let written=false,verified=false,attemptedWrite=false;
+    try{
+      await withSerialLock(async session=>{
+        // A rejected write() may still have placed bytes on the UART wire.
+        attemptedWrite=true;
+        await writeOffsetRaw(command,raw,session);written=true;
+        await delay(100);
+        for(const getter of [0x2D,0x22,0x3E]){
+          try{recordOk(getter,await readFieldRaw(getter,session));}
+          catch(error){
+            recordFail(getter);
+            issues.push(`0x${hex2(getter)}: ${error.message||String(error)}`);
+          }
+        }
+        const readback=get(results,0x2D);
+        if(readback&&readback.length===4){
+          const actual=BigInt(signed32(readback));
+          if(actual===raw){verified=true;adjustRaw=actual;adjustDirty=false;}
+          else issues.push(`0x2D mismatch: sent ${signedRawHex(raw)}, received ${signedRawHex(actual)}`);
+        }
+      });
+    }catch(error){issues.push(error.message||String(error));}
+    finally{
+      syncAdjustmentFromDevice();
+      renderReport(buildReport(results));renderAdjust();
+      adjustBusy=false;updateAdjustControls();
+      if(activePage==='dashboard'&&port&&!readError)startLivePolling();
+    }
+    if(attemptedWrite&&(!verified||issues.length)){
+      // A readback failure does not undo an already-transmitted volatile or
+      // persistent offset command. Refuse another write until reconnect.
+      deviceWritesBlocked=true;
+      for(const getter of [0x2D,0x22,0x3E])recordFail(getter);
+      renderReport(buildReport(results));renderAdjust();
+      Settings.updateControls();
+    }
+    if(!verified || issues.length){
+      const caution=attemptedWrite?' Reconnect before another write.':'';
+      if(written)toast('Command sent; '+(issues.join(' · ')||'readback unavailable')+'. Persistence not verified.'+caution);
+      else toast('Command failed: '+issues.join(' · ')+'.'+caution);
+    }
+  }
+
+  // Settings controller: reuses the main reader, port and serialTail queue.
+  // The block editors have their own readback snapshot. Backup/restore never use it.
+  const Settings=(()=>{
+    const NVRAM_SIZE=1024, NVRAM_BASE=0x2000, NVRAM_SETTLE_MS=2000;
+    // Only command IDs are needed here; the GETTERS registry owns the selector payloads.
+    const SETTINGS_READ_COMMANDS=[0x22,0x3D,0x47,0x65,0x57,0x59,
+      0x2B,0x63,0x7A,0x7C,0x7E,0x61];
+    
+    // Ordered 1 KiB logical NVRAM records, matching the reference Python script.
+    const NVRAM_FIELDS=[
+      {id:'dds_config',label:'DDS configuration',address:0x2000,length:8,read:0x22,write:0x21,kind:'bytes'},
+      {id:'frequency_table',label:'Frequency correction table',address:0x200A,length:80,read:0x59,write:0x58,kind:'s16le'},
+      {id:'adc_table',label:'Sensor calibration thresholds',address:0x2064,length:80,read:0x57,write:0x5D,kind:'u16le'},
+      {id:'reference_text',label:'Reference text',address:0x20C8,length:20,read:0x2B,write:0x2A,kind:'ascii'},
+      {id:'serial_number',label:'Serial number',address:0x212C,length:20,read:0x61,write:0x60,kind:'ascii'},
+      {id:'point_count',label:'Calibration point count',address:0x215E,length:1,read:0x65,write:0x64,kind:'u8'},
+      {id:'frequency_offset',label:'Frequency offset',address:0x2168,length:5,read:0x2D,write:0x2C,kind:'u32be',marker:0x55},
+      {id:'config_flags',label:'Configuration',address:0x2190,length:4,read:0x47,write:0x46,kind:'config',marker:0x55},
+      {id:'operating_counter',label:'Operating counter',address:0x21F4,length:82,read:0x67,write:null,kind:'counter',marker:0x7A},
+      {id:'text_35',label:'Additional text',address:0x2258,length:35,read:0x63,write:0x62,kind:'ascii'},
+      {id:'text_10a',label:'Additional text 1',address:0x2280,length:10,read:0x7A,write:0x7B,kind:'ascii'},
+      {id:'text_10b',label:'Additional text 2',address:0x2294,length:10,read:0x7C,write:0x7D,kind:'ascii'},
+      {id:'text_10c',label:'Additional text 3',address:0x22A8,length:10,read:0x7E,write:0x7F,kind:'ascii'},
+      {id:'frequency_limit',label:'Frequency limit',address:0x22BC,length:5,read:0x3B,write:0x3A,kind:'u32be',marker:0x67},
+      {id:'frequency_param',label:'Frequency parameter',address:0x22C1,length:5,read:0x3D,write:0x3C,kind:'u32be',marker:0x67}
+    ];
+    // Wire formats verified against the DDS60 4.1 dispatch handlers:
+    // 0x21: 8 BE bytes; 0x3C: 4 BE bytes; 0x46: 3 raw config bytes;
+    // 0x5D/0x58: 40 LE16 words (80 bytes, no selector);
+    // 0x64: one count byte (no selector); text setters: ASCII plus NUL.
+    const SETTER_GETTER=new Map(NVRAM_FIELDS.filter(field=>field.write!==null)
+      .map(field=>[field.write,field.read]));
+    const TEXT_SETTER_MAX=new Map([...USER_TEXT.map(([,setter,max])=>[setter,max]),[0x60,20]]);
+
+
+    const hexN=(value,digits)=>'0x'+Number(value).toString(16).toUpperCase().padStart(digits,'0');
+    const HEX32=/^(?:0x)?([0-9a-f]{1,8})$/i,HEX16=/^(?:0x)?([0-9a-f]{1,4})$/i;
+    let settingsResults=new Map(), failed=new Map(), busy=false, loadPromise=null;
+    let settingsWriteAttempts=0,unverifiedDdsWrite=false;
+    const bytesLE16=words=>Uint8Array.from(words.flatMap(word=>[word&255,(word>>>8)&255]));
+    const sameBytes=(a,b)=>a.length===b.length&&a.every((byte,i)=>byte===b[i]);
+    function updateControls(){
+      const connected=Boolean(currentSession?.ready)&&Boolean(port)&&!readError&&!stopRequested;
+      $('saveNvramBtn').disabled=!connected||busy;
+      $('restoreNvramBtn').disabled=!connected||busy||deviceWritesBlocked;
+      document.querySelectorAll('#settingsPage [data-validate]').forEach(b=>b.disabled=!connected||busy||deviceWritesBlocked);
+    }
+    // Settings reads use the shared transport; NVRAM work is excluded from command history.
+    // NVRAM records are read independently of editor form fields; the DDS
+    // record alone uses the SAME recovered/verified EEPROM pair as Dashboard
+    // and the Settings DDS editor, never uncorrected 0x22 working words.
+    const readPayload=async command=>(await readField(command)).payload;
+    function writeCommandFrame(command,payload){
+      if(!SETTER_GETTER.has(command)||!(payload instanceof Uint8Array)||!payload.length||payload.length>250)
+        throw Error('Unsupported write command or payload');
+      const n=payload.length;
+      if((command===0x21&&n!==8)||([0x3C,0x2C,0x3A].includes(command)&&n!==4)||
+         (command===0x46&&n!==3)||([0x58,0x5D].includes(command)&&n!==80)||
+         (command===0x64&&(n!==1||payload[0]<1||payload[0]>40))||
+         (TEXT_SETTER_MAX.has(command)&&(n>TEXT_SETTER_MAX.get(command)||payload[n-1]!==0)))
+        throw Error('Invalid setter payload for 0x'+hex2(command));
+      return encodeFrame(command,payload);
+    }
+    async function writeFieldRaw(command,payload,session=currentSession){
+      assertSession(session);
+      const entry=await transmit(session,command,writeCommandFrame(command,payload));
+      try{
+        const header=await readExact(4,220,session),n=header[1]+(header[2]<<8);
+        if(header[0]!==command||header[3]!==xorBytes(header.slice(0,3))||n<4||n>256||n===5)
+          throw Error('Unexpected setter acknowledgement');
+        const body=n>4?await readExact(n-4,TIMEOUT_MS,session):new Uint8Array(0);
+        if(body.length&&xorBytes(body.slice(0,-1))!==body[body.length-1])throw Error('Bad setter acknowledgement checksum');
+        updateCommandHistory(entry,'ACK',Uint8Array.from([...header,...body]));
+      }catch(error){
+        if(error.message!=='No response from device'){
+          updateCommandHistory(entry,'Error',null,'Acknowledgement: '+(error.message||String(error)));
+          noteCommandFailure(session,error);
+          throw error;
+        }
+      }finally{session.queue.length=0;}
+    }
+    async function writeAndVerify(command,payload,expected,description){
+      const getter=SETTER_GETTER.get(command);
+      if(getter===undefined)throw Error('No getter to verify this write');
+      const observed=await withSerialLock(async session=>{
+        // Mark potential delivery BEFORE writer.write(), not after its return.
+        settingsWriteAttempts++;
+        if(command===0x21)unverifiedDdsWrite=true;
+        await writeFieldRaw(command,payload,session);
+        return (await readFieldRaw(getter,session)).payload;
+      });
+      if(!expected(observed))throw Error(description+': device readback did not match');
+      if(command===0x21)unverifiedDdsWrite=false;
+      settingsResults.set(getter,observed);
+      if(getter===0x47)runtimeCurveEnabled=Boolean(observed[0]&0x01);
+    }
+    async function refreshDashboardOnSave(){
+      const failures=await refreshOtherPagesAfterSettingsSave();
+      if(failures.length)toast('Settings saved, but dashboard refresh missed '+failures.join(', '));
+      return failures;
+    }
+    function resetSettingsCache(){settingsResults=new Map();failed=new Map();clearAllFields();}
+    async function loadFieldsAfterRestore(){
+      resetSettingsCache();
+      for(const command of SETTINGS_READ_COMMANDS){
+        if(!port||readError)throw Error('Connection lost');
+        try{
+          const payload=await readPayload(command);
+          settingsResults.set(command,payload);
+          if(command===0x47)runtimeCurveEnabled=Boolean(payload[0]&0x01);
+        }catch(error){failed.set(command,error.message||String(error));settingsResults.set(command,null);}
+        renderReadback();await delay(BETWEEN_COMMANDS_MS);
+      }
+      // When the user connects directly on Settings, there may be no
+      // Dashboard snapshot yet. Capture one using these Settings tables.
+      if(!configuredDDSRecovery?.words&&currentSession&&
+         [0x22,0x47,0x65,0x57,0x59].every(cmd=>settingsResults.get(cmd) instanceof Uint8Array))
+        await captureConfiguredDDSSnapshot(currentSession,settingsResults);
+      renderReadback('dds');
+    }
+    function load(){
+      if(loadPromise)return loadPromise;
+      if(!currentSession?.ready||!port||readError){clearAllFields();updateControls();return Promise.resolve();}
+      if(busy)return Promise.resolve();
+      busy=true;updateControls();clearAllFields();
+      loadPromise=(async()=>{
+        try{
+          if(scanPromise)await scanPromise; // Drain an interrupted Dashboard scan.
+          await loadFieldsAfterRestore();
+          if(failed.size)toast(`${failed.size} Settings getter(s) failed; unavailable fields show N/A.`);
+        }catch(error){toast('Settings read failed: '+(error.message||String(error)));}
+        finally{busy=false;loadPromise=null;updateControls();}
+      })();
+      return loadPromise;
+    }
+    function clearField(fieldId){
+      const field=$(fieldId);field.value='';field.placeholder='Not loaded';
+      field.classList.remove('device-value','empty-value');clearError(field);
+    }
+    function clearAllFields(){
+      for(const id of ['ddsBaseHigh','ddsBaseLow','offsetDivisor',...Array.from({length:5},(_,i)=>`userText${i+1}`)])clearField(id);
+      for(const tr of $('calibrationRows').rows)for(const field of tr.querySelectorAll('input')){
+        field.value='';field.placeholder='Not loaded';field.classList.remove('device-value','empty-value');clearError(field);
+      }
+      $('activePointsText').textContent='40 points · awaiting device';
+      setSwitch('calEnabledSwitch','calEnabledStatus',null);
+      setSwitch('calAverageSwitch','calAverageStatus',null);
+      setSource(null);
+      ['ddsFeedback','miscFeedback','calibrationFeedback'].forEach(clearFeedback);
+    }
+    function showDeviceValue(field,value){
+      field.value=value;field.placeholder='';
+      field.classList.add('device-value');field.classList.remove('empty-value');
+    }
+    function showEmpty(field){
+      field.value='';field.placeholder='(empty)';
+      field.classList.remove('device-value');field.classList.add('empty-value');
+    }
+    function showUnavailable(field){
+      field.value='';field.placeholder='N/A';
+      field.classList.remove('device-value','empty-value');
+    }
+    function setSwitch(buttonId,statusId,enabled){
+      const button=$(buttonId),status=$(statusId);
+      button.setAttribute('aria-checked',String(Boolean(enabled)));
+      status.textContent=enabled===null?'N/A':enabled?'On':'Off';
+    }
+    function setSource(source){
+      document.querySelectorAll('.source-choice').forEach(button=>{
+        const selected=source!==null&&button.dataset.source===source;
+        button.classList.toggle('selected',selected);
+        button.setAttribute('aria-pressed',String(selected));
+      });
+    }
+    // Show a cached reply for `command` in `fields`: N/A if that read failed, nothing if it was never attempted.
+    function showLoaded(command,fields,render){
+      const payload=settingsResults.get(command);
+      if(payload)render(payload);
+      else if(settingsResults.has(command))fields.forEach(showUnavailable);
+    }
+    function renderReadback(only=null){
+      if(!only||only==='dds'){
+        const [high,low,divisor]=['ddsBaseHigh','ddsBaseLow','offsetDivisor'].map($);
+        const base=configuredDDSRecovery?.words;
+        if(base){
+          showDeviceValue(high,hexN(base[0],8));showDeviceValue(low,hexN(base[1],8));
+          high.title=low.title=configuredDDSRecovery.note;
+        }else if(settingsResults.has(0x22)){
+          // 0x22 is working RAM, NOT EEPROM. Never display it as DDS High/Low.
+          showUnavailable(high);showUnavailable(low);
+          high.title=low.title=configuredDDSRecovery?.note||'Awaiting configured DDS reconstruction';
+        }
+        showLoaded(0x3D,[divisor],payload=>showDeviceValue(divisor,String(signed32(payload))));
+      }
+      if(!only||only==='calibration'){
+        const cfg=settingsResults.get(0x47);
+        if(cfg){
+          const flags=cfg[0];
+          setSwitch('calEnabledSwitch','calEnabledStatus',Boolean(flags&0x01));
+          setSwitch('calAverageSwitch','calAverageStatus',Boolean(flags&0x20));
+          setSource(flags&0x10?'one-wire':'adc');
+        }else if(settingsResults.has(0x47)){
+          setSwitch('calEnabledSwitch','calEnabledStatus',null);
+          setSwitch('calAverageSwitch','calAverageStatus',null);
+          setSource(null);
+        }
+        const countPayload=settingsResults.get(0x65);
+        const count=countPayload&&countPayload[0]===0?countPayload[1]:null;
+        const valuesPayload=settingsResults.get(0x57),correctionPayload=settingsResults.get(0x59);
+        const values=valuesPayload?calibrationWords(valuesPayload):null;
+        const corrections=correctionPayload?calibrationWords(correctionPayload):null;
+        $('activePointsText').textContent=count===null
+          ?(settingsResults.has(0x65)?'40 points · count unavailable':'40 points · awaiting count')
+          :`${count} active / 40 points · hexadecimal`;
+        if(count===null){
+          if(settingsResults.has(0x65))for(const row of $('calibrationRows').rows)for(const field of row.querySelectorAll('input'))showUnavailable(field);
+        }else for(let i=0;i<40;i++){
+          const fields=$('calibrationRows').rows[i].querySelectorAll('input');
+          if(i>=count){showEmpty(fields[0]);showEmpty(fields[1]);}
+          else{
+            if(values)showDeviceValue(fields[0],hexN(values[i],4));
+            else if(settingsResults.has(0x57))showUnavailable(fields[0]);
+            if(corrections)showDeviceValue(fields[1],hexN(corrections[i],4));
+            else if(settingsResults.has(0x59))showUnavailable(fields[1]);
+          }
+        }
+      }
+      if(!only||only==='misc'){
+        USER_TEXT.forEach(([command],i)=>{
+          const field=$(`userText${i+1}`);
+          showLoaded(command,[field],payload=>{const value=asciiField(payload);if(value)showDeviceValue(field,value);else showEmpty(field);});
+        });
+      }
+    }
+
+    function showNvramFeedback(message,kind='info'){
+      const field=$('nvramFeedback');field.hidden=!message;
+      field.textContent=message;field.classList.toggle('error',kind==='error');
+      field.classList.toggle('success',kind==='success');
+    }
+    function nvramFieldData(field,payload){
+      // For 0x57/0x59/0x65 the first response byte is an echoed selector, not NVRAM data.
+      return ECHO_READS.has(field.read)?payload.slice(1):payload;
+    }
+    function validateNvramRead(field,payload){
+      const data=nvramFieldData(field,payload);
+      if(field.kind==='ascii'){
+        if(data.length<1||data.length>field.length)throw Error(field.label+': invalid text length');
+        asciiField(data);
+      }else if(field.kind==='counter'){
+        if(data.length!==3)throw Error('Operating counter must contain three bytes');
+      }else if(data.length!==field.length-(field.marker!==undefined?1:0)){
+        throw Error(field.label+': wrong NVRAM getter length');
+      }
+      return data;
+    }
+    // Firmware-informed logical reconstruction from the 0x67 payload
+    // [slot, count low, count high]. The initializer zeros only slots 0–23;
+    // untouched slots 24–39 are assumed erased. Completed slots are FFFF.
+    // This models a normal first pass, not a byte-exact physical EEPROM read.
+    function counterRecordFromUart67(data){
+      if(!(data instanceof Uint8Array)||data.length!==3)
+        throw Error('Operating counter must contain three bytes');
+      const [slot,low,high]=data;
+      if(slot>=40)return null; // Unknown state: leave the whole record erased.
+      const record=new Uint8Array(82).fill(0xFF);
+      record[0]=0x7A;record[1]=slot;
+      record.fill(0,2,50); // Initializer zeros slots 0–23 only.
+      record.fill(0xFF,2,2+slot*2); // Earlier completed slots saturated.
+      record.set([high,low],2+slot*2); // EEPROM order is big-endian.
+      return record;
+    }
+    function constructNvramImage(values){
+      const image=new Uint8Array(NVRAM_SIZE).fill(0xFF);
+      for(const field of NVRAM_FIELDS){
+        const data=values.get(field.id);
+        if(!(data instanceof Uint8Array))throw Error('Missing '+field.label+' for backup');
+        const start=field.address-NVRAM_BASE;
+        if(field.kind==='counter'){
+          const record=counterRecordFromUart67(data);
+          if(record)image.set(record,start);
+        }else if(field.kind==='ascii'&&data.length===1&&data[0]===0){
+          // An empty UART string is a NUL, but the logical NVRAM image uses
+          // an erased FF-filled record rather than writing a zero terminator.
+          continue;
+        }else if(field.marker!==undefined){
+          image[start]=field.marker; // inferred marker, as in reference script
+          image.set(data,start+1);
+        }else image.set(data,start);
+      }
+      return image;
+    }
+    async function ensureNvramFirmware(){
+      // The reference script refuses backups and writes to other application versions.
+      const payload=await readPayload(0xF0);
+      if(asciiField(payload)!=='DDS60 4.1')throw Error('Expected DDS60 4.1 firmware');
+    }
+    function nvramDefaultFilename(serial){
+      const decoded=asciiField(serial).replace(/[^a-zA-Z0-9._-]+/g,'_').replace(/^\.+/,'').slice(0,64);
+      return `fe_${decoded||'unknown'}_nvram.bin`;
+    }
+    function saveNvramFallback(image,filename){
+      const url=URL.createObjectURL(new Blob([image],{type:'application/octet-stream'}));
+      const anchor=document.createElement('a');anchor.href=url;anchor.download=filename;
+      document.body.append(anchor);anchor.click();anchor.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),10000);
+    }
+
+    async function saveNvram(){
+      if(!port||readError||busy){toast('Connect to the device before backing up NVRAM.');return;}
+      beginPrivateOperationHistory('Save NVRAM');
+      busy=true;updateControls();
+      let handle=null,filename='fe_unknown_nvram.bin';
+      showNvramFeedback('Checking firmware and device serial number…');
+      try{
+        await ensureNvramFirmware();
+        filename=nvramDefaultFilename(await readPayload(0x61));
+        // A backup must not silently substitute effective 0x22 words for
+        // the EEPROM DDS pair. Abort before opening a save dialog if unknown.
+        configuredDDSBytes();
+        // Native file picker should be opened as close to the user click as possible.
+        if(typeof window.showSaveFilePicker==='function'){
+          try{handle=await window.showSaveFilePicker({suggestedName:filename,
+            types:[{description:'NVRAM binary image',accept:{'application/octet-stream':['.bin']}}]});}
+          catch(error){if(error.name==='AbortError')return;throw Error('Save As dialog: '+error.message);}
+        }
+        const values=new Map();
+        for(let i=0;i<NVRAM_FIELDS.length;i++){
+          const field=NVRAM_FIELDS[i];
+          showNvramFeedback(`Reading NVRAM ${i+1} / ${NVRAM_FIELDS.length}: ${field.label}`);
+          values.set(field.id,field.id==='dds_config'
+            ?configuredDDSBytes()
+            :validateNvramRead(field,await readPayload(field.read)));
+          await delay(50);
+        }
+        const image=constructNvramImage(values);
+        if(image.length!==NVRAM_SIZE)throw Error('Internal image length mismatch');
+        if(handle){
+          const writable=await handle.createWritable();
+          try{await writable.write(image);await writable.close();}
+          catch(error){try{await writable.abort();}catch{}throw error;}
+        }else saveNvramFallback(image,filename);
+        showNvramFeedback(`NVRAM backup saved: ${handle?.name||filename} (${NVRAM_SIZE} bytes).`,'success');
+        toast('NVRAM backup saved.');
+      }catch(error){
+        showNvramFeedback('NVRAM backup failed: '+error.message+'. No image was saved.','error');
+        toast('NVRAM backup failed: '+error.message);
+      }finally{endPrivateOperationHistory();busy=false;updateControls();}
+    }
+    function extractNvramValue(image,field){
+      // Matches Python extract_value: skip counter, erased records, and ambiguous empty text.
+      const record=image.slice(field.address-NVRAM_BASE,field.address-NVRAM_BASE+field.length);
+      if(field.kind==='counter')return null;
+      if(field.marker!==undefined){
+        return record[0]===field.marker?record.slice(1):null;
+      }
+      if(field.kind==='ascii'){
+        if(!record.length||record[0]===0xFF)return null;
+        const at=record.indexOf(0);
+        if(at<0)throw Error(field.label+': unterminated text in image');
+        const payload=record.slice(0,at+1);
+        asciiField(payload);
+        return payload.length>1?payload:null;
+      }
+      if(record.every(byte=>byte===0xFF))return null;
+      return record;
+    }
+    function prepareNvramRestore(image){
+      if(image.length!==NVRAM_SIZE)throw Error(`NVRAM file must be exactly ${NVRAM_SIZE} bytes (got ${image.length})`);
+      const plan=[];
+      for(const field of NVRAM_FIELDS){
+        const value=extractNvramValue(image,field);
+        if(value===null)continue;
+        if(field.kind==='u8'&&(value.length!==1||value[0]<1||value[0]>40))
+          throw Error('Calibration point count must be in range 1..40');
+        if(field.kind==='ascii'&&(value.length<2||value.length>field.length))
+          throw Error(field.label+': invalid string value');
+        if(field.kind!=='ascii'&&value.length!==field.length-(field.marker!==undefined?1:0))
+          throw Error(field.label+': invalid field size');
+        // F1: match the Settings editor's positive signed divisor, and the
+        // hardware-safe offset limit already enforced by Adjust. Validate every
+        // record in the plan before allowing even the first setter.
+        if(field.id==='frequency_param'){
+          const d=signed32(value);
+          if(d<1)throw Error('Offset divisor must be a positive signed 32-bit integer (1..2147483647)');
+        }
+        if(field.id==='frequency_limit'){
+          const limit=signed32(value);
+          if(limit<1||limit>0x19999999)
+            throw Error('Frequency offset limit must be positive and at most 0x19999999');
+        }
+        if(field.id==='frequency_offset'){
+          const offset=signed32(value);
+          if(Math.abs(offset)>0x0FFFFFFF)
+            throw Error('Frequency offset is outside the firmware raw-offset clamp range');
+        }
+        if(field.write===null)throw Error(field.label+': cannot restore over UART');
+        plan.push({field,value});
+      }
+      if(!plan.length)throw Error('No restorable records found in the NVRAM image');
+      // A saved raw offset must be representable under the restored limit.
+      // Reject an internally inconsistent image before any setter is issued.
+      const plannedOffset=plan.find(entry=>entry.field.id==='frequency_offset');
+      const plannedLimit=plan.find(entry=>entry.field.id==='frequency_limit');
+      if(plannedOffset&&plannedLimit &&
+          Math.abs(signed32(plannedOffset.value))>signed32(plannedLimit.value))
+        throw Error('Frequency offset exceeds the NVRAM image offset limit');
+      return plan;
+    }
+    function invalidateAfterPossibleWrite(){
+      // F5: no cached or displayed value may be trusted once a setter may have
+      // reached the device, even if the *first* verification failed.
+      deviceWritesBlocked=true;
+      resetSettingsCache();
+      results=new Map();diagnostics=new Map();
+      configuredDDSRecovery=null;runtimeCurveEnabled=null;
+      adjustDirty=false;adjustNegativeZero=false;
+      renderReport(buildReport(results));renderAdjust();
+      updateControls();updateAdjustControls();
+    }
+    async function restoreNvramFile(file){
+      if(!port||readError||busy||deviceWritesBlocked){
+        toast('Connect and finish other Settings operations before restoring NVRAM.');return;
+      }
+      // F2: acquire exclusive ownership BEFORE file.arrayBuffer(), confirm(),
+      // or any other asynchronous task; hold it until recovery has completed.
+      const session=currentSession;
+      beginPrivateOperationHistory('Restore NVRAM');
+      busy=true;stopLivePolling();updateControls();
+      let plan=null,completed=0,attemptedWrites=0,success=false;
+      try{
+        const image=new Uint8Array(await file.arrayBuffer());
+        assertSession(session);
+        plan=prepareNvramRestore(image); // all fields validated before any setter
+        const message=`Restore ${plan.length} supported settings from "${file.name}"?\n\n`+
+          'This overwrites persistent device settings (including the serial number when present). '+
+          'Operating counter history and ambiguous/erased records cannot be restored. '+
+          'A failure may leave some settings changed. Back up the current device first.\n\nContinue?';
+        if(!window.confirm(message))return;
+        assertSession(session);
+        await ensureNvramFirmware();
+        assertSession(session);
+        for(const {field,value} of plan){
+          assertSession(session);
+          showNvramFeedback(`Restoring ${completed+1} / ${plan.length}: ${field.label}…`);
+          const observed=await withSerialLock(async lockedSession=>{
+            assertSession(session);
+            if(lockedSession!==session)throw Error('Connection changed during restore');
+            attemptedWrites++; // Before transmission: delivery may be uncertain on error.
+            await writeFieldRaw(field.write,value,lockedSession);
+            await delay(NVRAM_SETTLE_MS); // No other UART traffic while EEPROM settles.
+            assertSession(session);
+            return (await readFieldRaw(field.read,lockedSession)).payload;
+          });
+          if(!sameBytes(validateNvramRead(field,observed),value))
+            throw Error(`${field.label}: device verification failed`);
+          if(field.id==='dds_config'){
+            const high=uintBE(value,0,4),low=uintBE(value,4,4);
+            configuredDDSRecovery=configuredDDSFromWords([high,low],
+              `Configured NVRAM FREQ0/FREQ1 verified during Restore NVRAM: 0x${hex8(high)} / 0x${hex8(low)}.`);
+          }
+          completed++;
+        }
+        success=true;
+        showNvramFeedback(`Restore verified: ${completed} records. Unobservable/erased records were skipped.`,'success');
+        toast(`NVRAM restore complete: ${completed} records verified.`);
+      }catch(error){
+        const detail=error.message||String(error);
+        showNvramFeedback(`Restore incomplete after ${completed} / ${plan?.length||0} records: ${detail}.`+
+          (attemptedWrites?' Device state may have changed.':' No setters were sent.'),'error');
+        toast('NVRAM restore incomplete: '+detail);
+      }finally{
+        // F5: refresh even if verification of the FIRST setter failed.
+        // If reloading any essential setting is impossible, keep all writers
+        // disabled until a new physical connection establishes new state.
+        if(attemptedWrites){
+          if(!success)invalidateAfterPossibleWrite();
+          try{
+            assertSession(session);
+            await loadFieldsAfterRestore();
+            assertSession(session);
+            const dashboardFailures=await refreshOtherPagesAfterSettingsSave();
+            assertSession(session);
+            const essential=[0x22,0x2D,0x3B,0x3D,0x47,0x65,0x57,0x59,0x3E];
+            const criticalFailure=essential.some(command=>dashboardFailures.includes('0x'+hex2(command)));
+            if(failed.size||criticalFailure)throw Error('Essential device readbacks are unavailable');
+            deviceWritesBlocked=false;
+            if(success)showNvramFeedback(`Restore verified: ${completed} records. Visible settings refreshed.`,'success');
+            else showNvramFeedback(`Restore incomplete after ${completed} verified records. Current device values were reloaded; inspect before retrying.`,'error');
+          }catch(error){
+            invalidateAfterPossibleWrite();
+            showNvramFeedback('Restore state uncertain: '+(error.message||String(error))+'. Writes disabled until reconnect.','error');
+            toast('Device state uncertain. Reconnect before writing again.');
+          }
+        }
+        endPrivateOperationHistory();
+        busy=false;updateControls();updateAdjustControls();
+      }
+    }
+
+    $('saveNvramBtn').addEventListener('click',()=>{void saveNvram();});
+    $('restoreNvramBtn').addEventListener('click',()=>{$('nvramFileInput').click();});
+    $('nvramFileInput').addEventListener('change',event=>{
+      const file=event.target.files?.[0];event.target.value='';
+      if(file)void restoreNvramFile(file);
+    });
+
+    function bindBinarySwitch(buttonId,statusId){
+      const button=$(buttonId),status=$(statusId);
+      button.addEventListener('click',()=>{
+        const enabled=button.getAttribute('aria-checked')!=='true';
+        button.setAttribute('aria-checked',String(enabled));status.textContent=enabled?'On':'Off';
+      });
+    }
+    bindBinarySwitch('calEnabledSwitch','calEnabledStatus');
+    bindBinarySwitch('calAverageSwitch','calAverageStatus');
+    document.querySelectorAll('.source-choice').forEach(button=>{
+      button.addEventListener('click',()=>setSource(button.dataset.source));
+    });
+    const rows=$('calibrationRows'),fragment=document.createDocumentFragment();
+    for(let point=1;point<=40;point++){
+      const tr=document.createElement('tr');
+      ['Value','Correction'].forEach((column,index)=>{
+        const td=document.createElement('td'),cell=document.createElement('div');cell.className='calibration-cell';
+        if(index===0){
+          const number=document.createElement('span');number.className='point-index';
+          number.textContent=String(point).padStart(2,'0');number.setAttribute('aria-hidden','true');cell.appendChild(number);
+        }
+        const field=document.createElement('input');
+        field.className='calibration-input';field.type='text';field.autocomplete='off';field.spellcheck=false;
+        field.placeholder='Not loaded';field.setAttribute('aria-label',`${column}, calibration point ${point}`);
+        field.setAttribute('inputmode','text');
+        field.addEventListener('blur',()=>normalizeHex(field,4));
+        field.addEventListener('input',()=>{
+          field.classList.remove('device-value','empty-value');clearError(field);clearFeedback('calibrationFeedback');
+        });
+        cell.appendChild(field);td.appendChild(cell);tr.appendChild(td);
+      });
+      fragment.appendChild(tr);
+    }
+    rows.appendChild(fragment);
+    function clearError(field){field.removeAttribute('aria-invalid');field.removeAttribute('title');}
+    function markError(field,reason){field.setAttribute('aria-invalid','true');field.title=reason;}
+    function clearFeedback(id){const el=$(id);el.hidden=true;el.textContent='';}
+    function showFeedback(id,message){const el=$(id);el.hidden=false;el.textContent=message;}
+    function normalizeHex(field,digits){
+      const text=field.value.trim();if(!text)return;
+      const match=(digits===8?HEX32:HEX16).exec(text);
+      if(match){field.value='0x'+match[1].toUpperCase().padStart(digits,'0');clearError(field);}
+    }
+    function validateHex(field,digits,required){
+      const text=field.value.trim();
+      if(!text){
+        if(required){markError(field,`Required: ${digits*4}-bit hexadecimal value`);return false;}
+        clearError(field);return true;
+      }
+      if(!(digits===8?HEX32:HEX16).test(text)){
+        markError(field,`Enter 1–${digits} hex digits, optionally prefixed 0x`);return false;
+      }
+      normalizeHex(field,digits);return true;
+    }
+    function focusError(fields){
+      const first=fields.find(f=>f.getAttribute('aria-invalid')==='true');
+      if(first){first.focus({preventScroll:true});first.scrollIntoView({block:'nearest',behavior:'smooth'});}
+    }
+
+    function validateDDS(){
+      const fields=[$('ddsBaseHigh'),$('ddsBaseLow'),$('offsetDivisor')];
+      let errors=0;
+      for(const field of fields.slice(0,2))if(!validateHex(field,8,true))errors++;
+      const divisor=fields[2],text=divisor.value.trim();
+      if(!/^[0-9]+$/.test(text)||BigInt(text||'0')===0n||BigInt(text||'0')>0x7FFFFFFFn){
+        markError(divisor,'Enter a decimal integer from 1 to 2147483647');errors++;
+      }else clearError(divisor);
+      if(errors){showFeedback('ddsFeedback',`DDS: ${errors} invalid field${errors===1?'':'s'}. Use 32-bit hex for DDS high/low and a positive signed 32-bit divisor.`);focusError(fields);}
+      else clearFeedback('ddsFeedback');
+      return !errors;
+    }
+    function validateMisc(){
+      const fields=Array.from({length:5},(_,i)=>$(`userText${i+1}`));
+      const lengths=USER_TEXT.map(([,,max])=>max-1);let errors=0;
+      fields.forEach((field,i)=>{
+        const value=field.value;
+        if(value.length>lengths[i]||!Array.from(value).every(c=>c.charCodeAt(0)>=32&&c.charCodeAt(0)<=126)){
+          markError(field,`Printable ASCII only; maximum ${lengths[i]} characters`);errors++;
+        }else clearError(field);
+      });
+      if(errors){showFeedback('miscFeedback',`Misc: ${errors} invalid text field${errors===1?'':'s'}. Use printable ASCII and respect the per-field character limits.`);focusError(fields);}
+      else clearFeedback('miscFeedback');
+      return !errors;
+    }
+    function validateCalibration(){
+      const points=Array.from(rows.querySelectorAll('tr'),tr=>Array.from(tr.querySelectorAll('input')));
+      const lastUsed=points.findLastIndex(pair=>pair.some(field=>field.value.trim()!==''));
+      let errors=0,gaps=0;
+      // Zero active calibration points are not accepted by this firmware UI.
+      if(lastUsed<0){
+        markError(points[0][0],'At least one calibration point is required');
+        markError(points[0][1],'At least one calibration point is required');
+        showFeedback('calibrationFeedback','Calibration: at least one complete point is required (1–40).');
+        focusError(points[0]);
+        return false;
+      }
+      points.forEach((pair,index)=>{
+        pair.forEach(clearError);
+        if(index>lastUsed)return;
+        const emptyValue=pair[0].value.trim()==='',emptyCorrection=pair[1].value.trim()==='';
+        if(emptyValue&&emptyCorrection)gaps++;
+        pair.forEach(field=>{
+          if(!field.value.trim()){
+            markError(field,emptyValue&&emptyCorrection?'Gap: a later calibration point is populated':'Both Value and Correction are required for an active point');errors++;
+          }else if(!validateHex(field,4,true))errors++;
+        });
+      });
+      if(errors){
+        const gapNote=gaps?` ${gaps} empty row${gaps===1?'':'s'} before the last populated point.`:'';
+        showFeedback('calibrationFeedback',`Calibration: ${errors} invalid cell${errors===1?'':'s'}.${gapNote} Fill points consecutively from 01 with two 16-bit hex values.`);
+        focusError(points.flat());
+      }else clearFeedback('calibrationFeedback');
+      return !errors;
+    }
+    const validators={dds:validateDDS,misc:validateMisc,calibration:validateCalibration};
+    const REQUIRED={dds:[0x22,0x3D],misc:USER_TEXT.map(([getter])=>getter),calibration:[0x47,0x65,0x57,0x59]};
+    function confirmedBaseline(block){
+      const absent=REQUIRED[block].filter(command=>!(settingsResults.get(command) instanceof Uint8Array));
+      if(absent.length)throw Error('Missing device readback: '+absent.map(command=>'0x'+hex2(command)).join(', ')+'. Refresh before saving.');
+      if(block==='dds'&&!configuredDDSRecovery?.words)
+        throw Error('Configured DDS tuning words unavailable. Reconnect or refresh before editing the EEPROM base words.');
+    }
+    function asciiPayload(value){return Uint8Array.from([...value].map(c=>c.charCodeAt(0)).concat(0));}
+
+    async function saveDDS(){
+      const high=Number(BigInt($('ddsBaseHigh').value.trim())),low=Number(BigInt($('ddsBaseLow').value.trim()));
+      const target=Uint8Array.from([...bytesBE(high,4),...bytesBE(low,4)]);
+      const divisor=bytesBE(BigInt($('offsetDivisor').value.trim()),4);
+      let changes=0;
+      // Compare against EEPROM base words, not current compensated 0x22.
+      // Firmware 0x21 directly writes those eight base bytes to NVRAM;
+      // the immediate 0x22 readback can reflect uncorrected direct programming.
+      if(!sameBytes(configuredDDSBytes(),target)){
+        await writeAndVerify(0x21,target,reply=>sameBytes(reply,target),'DDS high/low');
+        configuredDDSRecovery=configuredDDSFromWords([high,low],
+          `Configured NVRAM FREQ0/FREQ1 were verified after UART 0x21 write: 0x${hex8(high)} / 0x${hex8(low)}. `+
+          'These known base words are shared by Dashboard, Settings and NVRAM backup.');
+        changes++;
+      }
+      if(!sameBytes(settingsResults.get(0x3D),divisor)){
+        await writeAndVerify(0x3C,divisor,reply=>sameBytes(reply,divisor),'Offset divisor');changes++;
+      }
+      return changes;
+    }
+    async function saveMisc(){
+      let changes=0;
+      for(let i=0;i<USER_TEXT.length;i++){
+        const [getter,setter]=USER_TEXT[i],value=$(`userText${i+1}`).value;
+        if(value===asciiField(settingsResults.get(getter)))continue;
+        const payload=asciiPayload(value);
+        await writeAndVerify(setter,payload,reply=>asciiField(reply)===value,`User text ${i+1}`);
+        changes++;
+      }
+      return changes;
+    }
+    async function saveCalibration(){
+      const cfg=Uint8Array.from(settingsResults.get(0x47));
+      const flags=(cfg[0]&~(0x01|0x10|0x20))|
+        ($('calEnabledSwitch').getAttribute('aria-checked')==='true'?0x01:0)|
+        (document.querySelector('.source-choice.selected')?.dataset.source==='one-wire'?0x10:0)|
+        ($('calAverageSwitch').getAttribute('aria-checked')==='true'?0x20:0);
+      if(!document.querySelector('.source-choice.selected'))throw Error('Choose a calibration source before saving.');
+      cfg[0]=flags;
+      const oldValues=calibrationWords(settingsResults.get(0x57)),oldCorrections=calibrationWords(settingsResults.get(0x59));
+      const values=oldValues.slice(),corrections=oldCorrections.slice();
+      const points=Array.from(rows.querySelectorAll('tr'),tr=>Array.from(tr.querySelectorAll('input')));
+      const last=points.findLastIndex(pair=>pair.some(field=>field.value.trim()!==''));
+      const count=last+1;
+      for(let i=0;i<count;i++){
+        values[i]=parseInt(points[i][0].value,16);
+        corrections[i]=parseInt(points[i][1].value,16);
+      }
+      const valuesRaw=bytesLE16(values),correctionsRaw=bytesLE16(corrections);
+      const currentValues=settingsResults.get(0x57).slice(1),currentCorrections=settingsResults.get(0x59).slice(1);
+      const oldCount=settingsResults.get(0x65)[1];
+      let changes=0;
+      if(!sameBytes(currentValues,valuesRaw)){
+        await writeAndVerify(0x5D,valuesRaw,reply=>reply[0]===0&&sameBytes(reply.slice(1),valuesRaw),'Calibration values');changes++;
+      }
+      if(!sameBytes(currentCorrections,correctionsRaw)){
+        await writeAndVerify(0x58,correctionsRaw,reply=>reply[0]===0&&sameBytes(reply.slice(1),correctionsRaw),'Calibration corrections');changes++;
+      }
+      if(count!==oldCount){
+        await writeAndVerify(0x64,Uint8Array.of(count),reply=>reply[0]===0&&reply[1]===count,'Active calibration count');changes++;
+      }
+      if(!sameBytes(settingsResults.get(0x47),cfg)){
+        await writeAndVerify(0x46,cfg,reply=>sameBytes(reply,cfg),'Calibration switches');changes++;
+      }
+      return changes;
+    }
+    const savers={dds:saveDDS,misc:saveMisc,calibration:saveCalibration};
+    async function saveBlock(block){
+      if(deviceWritesBlocked){toast('Device state uncertain; reconnect before writing again.');return;}
+      if(busy||!port||readError){toast('Connect and finish reading the device before saving.');return;}
+      if(!validators[block]()){
+        toast('Validation failed. Correct the highlighted fields; nothing was sent.');return;
+      }
+      try{confirmedBaseline(block);}catch(error){showFeedback(block+'Feedback',error.message);toast(error.message);return;}
+      busy=true;settingsWriteAttempts=0;unverifiedDdsWrite=false;
+      updateControls();toast(`Saving ${block}…`);
+      try{
+        const written=await savers[block]();
+        renderReadback(block);
+        clearFeedback(block+'Feedback');
+        if(written)await refreshDashboardOnSave();
+        toast(written?`${block.toUpperCase()} saved and verified (${written} write${written===1?'':'s'}).`:`${block.toUpperCase()}: no changes to save.`);
+      }catch(error){
+        // A setter may have been delivered even if its write or getter failed.
+        // Getter reload helpers intentionally collect failures rather than throw,
+        // so their completion ALONE cannot prove that state was recovered.
+        const possiblyWritten=settingsWriteAttempts>0;
+        if(possiblyWritten)invalidateAfterPossibleWrite();
+        let refreshed=false;
+        try{
+          await loadFieldsAfterRestore();
+          const dashboardFailures=await refreshDashboardOnSave();
+          const essential=[0x22,0x2D,0x3B,0x3D,0x3E,0x47,0x53,0x65,0x57,0x59];
+          const missing=REQUIRED[block].some(command=>!(settingsResults.get(command) instanceof Uint8Array));
+          if(failed.size||missing||essential.some(command=>dashboardFailures.includes('0x'+hex2(command)))||
+             (block==='dds'&&!configuredDDSRecovery?.words)||unverifiedDdsWrite)
+            throw Error('Essential readback incomplete or configured DDS baseline uncertain');
+          refreshed=true;
+          if(possiblyWritten)deviceWritesBlocked=false;
+        }catch(refreshError){
+          if(possiblyWritten)deviceWritesBlocked=true;
+          toast('Settings readback also failed: '+refreshError.message);
+        }
+        showFeedback(block+'Feedback',`Save incomplete: ${error.message||String(error)}. `+
+          (refreshed?'Current device values were reloaded; review before retrying.':'The device state may have changed; reconnect to re-read before retrying.'));
+        toast(`${block.toUpperCase()} save failed: ${error.message||String(error)}`);
+      }finally{busy=false;updateControls();updateAdjustControls();}
+    }
+
+    document.querySelectorAll('[data-validate]').forEach(button=>{
+      button.addEventListener('click',()=>{void saveBlock(button.dataset.validate);});
+    });
+    [$('ddsBaseHigh'),$('ddsBaseLow')].forEach(field=>{
+      field.addEventListener('blur',()=>normalizeHex(field,8));
+      field.addEventListener('input',()=>{field.classList.remove('device-value');clearError(field);clearFeedback('ddsFeedback');});
+    });
+    $('offsetDivisor').addEventListener('input',event=>{
+      event.target.classList.remove('device-value');clearError(event.target);clearFeedback('ddsFeedback');
+    });
+    for(let i=1;i<=5;i++){
+      $(`userText${i}`).addEventListener('input',event=>{
+        event.target.classList.remove('device-value','empty-value');clearError(event.target);clearFeedback('miscFeedback');
+      });
+    }
+    clearAllFields();updateControls();
+    return {load,isBusy:()=>busy,updateControls};
+  })();
+
+  adjustGroups.forEach((el,i)=>el.addEventListener('wheel',event=>{
+    event.preventDefault();if(adjustBusy)return;stepAdjustGroup(i,event.deltaY<0?1:-1);
+  },{passive:false}));
+  $('signButton').addEventListener('click',()=>{
+    if(adjustBusy)return;
+    adjustRaw=-adjustRaw;if(adjustRaw===0n)adjustNegativeZero=!adjustNegativeZero;
+    adjustDirty=true;renderAdjust();
+  });
+  document.querySelectorAll('.frequency-choice').forEach(btn=>
+    btn.addEventListener('click',()=>setSelectedOutput(Number(btn.dataset.frequency))));
+  $('resetBtn').addEventListener('click',()=>{
+    if(adjustBusy)return;adjustRaw=0n;adjustNegativeZero=false;adjustDirty=true;renderAdjust();
+  });
+  $('applyBtn').addEventListener('click',()=>{void applyAdjustment(0x2E);});
+  $('saveBtn').addEventListener('click',()=>{void applyAdjustment(0x2C);});
+  function toggleMenu(force){
+    const panel=$('menuPanel'),backdrop=$('menuBackdrop');
+    const open=typeof force==='boolean'?force:!panel.classList.contains('open');
+    panel.classList.toggle('open',open);
+    panel.setAttribute('aria-hidden',String(!open));
+    backdrop.classList.toggle('open',open);
+    $('menuBtn').setAttribute('aria-expanded',String(open));
+  }
+
+  $('connectBtn').addEventListener('click',()=>{void connect();});
+  $('menuBtn').addEventListener('click',()=>toggleMenu());
+  $('logMenuBtn').addEventListener('click',()=>selectPage('log'));
+  $('dashboardMenuBtn').addEventListener('click',()=>selectPage('dashboard'));
+  $('adjustMenuBtn').addEventListener('click',()=>selectPage('adjust'));
+  $('settingsMenuBtn').addEventListener('click',()=>selectPage('settings'));
+  $('aboutMenuBtn').addEventListener('click',()=>selectPage('about'));
+  $('aboutPage').addEventListener('click',event=>{
+    if(event.target===$('aboutPage') && activePage==='about')selectPage(aboutReturnPage);
+  });
+  document.addEventListener('keydown',event=>{if(event.key==='Escape')toggleMenu(false);});
+  $('menuBackdrop').addEventListener('click',()=>toggleMenu(false));
+  if('serial' in navigator){navigator.serial.addEventListener('disconnect',event=>{
+    const session=currentSession;
+    if(session&&(event.target===session.port||!session.port.readable)){
+      void retireSession(session,'Device unplugged. Reconnect the device to continue.');
+    }
+  });}
+  if(!('serial' in navigator)||!window.isSecureContext){
+    const notice=$('supportNotice');notice.classList.add('visible');
+    notice.textContent='Web Serial is unavailable here. Open this HTML file in a recent desktop Chromium browser (Chrome or Edge) using a secure context such as HTTPS or localhost. Local file access may also work, depending on the browser.';
+  }
+  document.title=APP_NAME;
+  $('appTitle').textContent=APP_NAME;
+  $('aboutProduct').textContent=APP_NAME;
+  $('aiAcknowledgement').textContent=`Application development assisted by OpenAI ${AI_MODEL_VERSION}.`;
+  renderReport(buildReport(results));renderCommandHistory();updateControls();renderAdjust();
+
+  </script>
+</body>
+</html>
