@@ -4,6 +4,9 @@
     py fe-nvram.py --read image.bin --port COM4
     py fe-nvram.py --write image.bin --port COM4
     py fe-nvram.py --show image.bin
+    py fe-nvram.py --set-sn 12345 image.bin
+    py fe-nvram.py --set-ot 0 image.bin
+    py fe-nvram.py --set-sn 12345 --set-ot 0 image.bin
 
 The image is a reconstruction from application UART getters, not a raw EEPROM read.
 In particular, 0x22 returns effective RAM DDS words; --read recovers NVRAM base
@@ -223,6 +226,39 @@ def make_image(port):
     return bytes(image)
 
 
+def set_image_fields(path, updates):
+    """Edit requested fields together; write the image only after all are valid."""
+    image = bytearray(read_image(path))
+    for field_name, value in updates:
+        if field_name == 'sn':
+            try:
+                data = value.encode('ascii')
+            except UnicodeEncodeError as exc:
+                raise ValueError('Serial number must contain printable ASCII characters') from exc
+            if len(data) > 19 or any(c < 32 or c > 126 for c in data):
+                raise ValueError('Serial number must be at most 19 printable ASCII characters')
+            image[0x12C:0x140] = (data + b'\x00').ljust(20, b'\xff') if data else b'\xff' * 20
+        elif field_name == 'ot':
+            try:
+                ticks = int(value)
+            except ValueError as exc:
+                raise ValueError('Operating time must be an integer number of 20-minute ticks') from exc
+            if not 0 <= ticks < 40 * 65536:
+                raise ValueError('Operating time must be between 0 and 2621439 ticks')
+            slot, active = divmod(ticks, 65536)
+            # UART reports [slot, low, high]; EEPROM stores big-endian.
+            image[0x1F4:0x246] = counter_record_from_uart67(
+                bytes((slot, active & 255, active >> 8)))
+        else:
+            raise ValueError('Use --set-sn or --set-ot')
+    Path(path).write_bytes(image)
+
+
+def set_image_field(path, field_name, value):
+    """Keep the single-field helper compatible with previous versions."""
+    set_image_fields(path, [(field_name, value)])
+
+
 def read_image(path):
     data = Path(path).read_bytes()
     if len(data) != SIZE:
@@ -400,21 +436,44 @@ def show(image):
 
 def main():
     parser = argparse.ArgumentParser(description='DDS60 4.1 NVRAM backup / restore / display', add_help=False)
-    group = parser.add_mutually_exclusive_group(required=True)
+    group = parser.add_mutually_exclusive_group()
     group.add_argument('--read', metavar='FILE')
     group.add_argument('--write', metavar='FILE')
     group.add_argument('--show', metavar='FILE')
+    parser.add_argument('--set-sn', metavar='SN')
+    parser.add_argument('--set-ot', type=int, metavar='TICKS')
+    parser.add_argument('file', nargs='?')
     parser.add_argument('--port')
     args = parser.parse_args()
-    if args.show:
+    setting = args.set_sn is not None or args.set_ot is not None
+    if setting:
+        if args.read or args.write or args.show:
+            parser.error('--set-sn and --set-ot cannot be combined with read/write/show')
+        if not args.file:
+            parser.error('--set-sn and --set-ot require a filename')
+        if args.port:
+            parser.error('--set-sn and --set-ot do not accept --port')
+    elif args.file:
+        parser.error('unexpected filename')
+    elif args.show:
         if args.port:
             parser.error('--show does not accept --port')
-    elif not args.port:
-        parser.error('--read and --write require --port')
+    elif args.read or args.write:
+        if not args.port:
+            parser.error('--read and --write require --port')
+    else:
+        parser.error('specify --read, --write, --show, --set-sn or --set-ot')
 
     try:
         if args.show:
             show(read_image(args.show))
+        elif setting:
+            updates = []
+            if args.set_sn is not None:
+                updates.append(('sn', args.set_sn))
+            if args.set_ot is not None:
+                updates.append(('ot', args.set_ot))
+            set_image_fields(args.file, updates)
         else:
             import serial
             port = serial.Serial(port=None, baudrate=9600, timeout=0.1, write_timeout=2)

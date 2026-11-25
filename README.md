@@ -19,28 +19,39 @@ The repository brings together a browser-based serial dashboard, Python utilitie
 
 ## Python [Scripts](Scripts/)
 
-### [`fe-nvram.py`](Scripts/fe-nvram.py): Read, display, or write NVRAM image.
+### [`fe-nvram.py`](Scripts/fe-nvram.py): Read, display, write, or edit NVRAM images.
 
 **Command switches:**
 
 | Switch | Meaning |
 | --- | --- |
-| `--read FILE` | Save an NVRAM image from the connected device. |
-| `--show FILE` | Display information from a saved image (offline). |
-| `--write FILE` | Write supported settings from an image. |
-| `--port PORT` | Serial port; required for `--read` and `--write`. |
+| `--read FILE` | Read device settings and reconstruct a 1 KiB NVRAM image. |
+| `--show FILE` | Display decoded settings from an image. |
+| `--write FILE` | Write supported settings from an image to the device. |
+| `--set-sn SN` | Set the serial number in an existing image. |
+| `--set-ot TICKS` | Set operating time in an existing image, in **20-minute ticks**. |
+| `--port PORT` | Serial port; required for `--read` and `--write` only. |
 
-Select exactly one of `--read`, `--show`, or `--write`.
+Use one of `--read`, `--show`, or `--write`, **or** one or both `--set-sn` / `--set-ot` switches with a positional image filename. The `--set-*` switches cannot be combined with device operations or `--port`.
 
 ```sh
-# Read device settings
+# Read device settings into a 1 KiB image
 python Scripts/fe-nvram.py --read nvram.bin --port COM4
 
 # Show a saved image
 python Scripts/fe-nvram.py --show nvram.bin
 
-# Write settings from a saved image
+# Write supported settings from a saved image
 python Scripts/fe-nvram.py --write nvram.bin --port COM4
+
+# Change the serial number in a file
+python Scripts/fe-nvram.py --set-sn 76189 nvram.bin
+
+# Reset the file's operating time to zero ticks
+python Scripts/fe-nvram.py --set-ot 0 nvram.bin
+
+# Change both values in a single operation
+python Scripts/fe-nvram.py --set-sn 76189 --set-ot 0 nvram.bin
 ```
 
 ### [`fe-flash.py`](Scripts/fe-flash.py): Read or write Flash images using the bootloader of the device.
@@ -78,7 +89,7 @@ python Scripts/fe-flash.py --port COM4 --write --lib lib.bin --app app.bin --all
 
 **[`fe-prog.hex`](Programmer/fe-prog.hex)** — pre-compiled firmware dump to upload to C8051F380 dev board.
 
-**[`fe-prog.py`](Programmer/fe-prog.py)** — host-side command-line utility for the programmer. Numeric arguments are **hexadecimal** (without `0x`).
+**[`fe-prog.py`](Programmer/fe-prog.py)** — host-side command-line utility for the programmer. Numeric arguments are **hex** (without `0x`).
 
 **Command switches:**
 
@@ -97,32 +108,19 @@ python Scripts/fe-flash.py --port COM4 --write --lib lib.bin --app app.bin --all
 
 Specify exactly one operation (`-rd`, `-rp`, `-wf`, `-we`, `-wp`, or `-c`). With `-rd` or `-rp`, `0,0` reads the complete 64 KiB address space. Reads and writes also require `-f`.
 
-**Examples** (from the repository root):
+**Examples:**
 
 ```sh
 # Read 1 KiB of data memory from page 0x80
-python Programmer/fe-prog.py -rd 2000,400 -p 80 -s COM3 -f nvram.bin
+python fe-prog.py -rd 2000,400 -p 80 -s COM3 -f nvram.bin
 
 # Read 4 KiB of program memory
-python Programmer/fe-prog.py -rp 0,1000 -p 00 -s COM3 -f boot.bin
+python fe-prog.py -rp 0,1000 -p 00 -s COM3 -f boot.bin
 
 # Erase a sector and program the library image
-python Programmer/fe-prog.py -c 4000 -p 03 -s COM3
-python Programmer/fe-prog.py -wf 4000,4000 -p 03 -s COM3 -f lib.bin
+python fe-prog.py -c 4000 -p 03 -s COM3
+python fe-prog.py -wf 4000,4000 -p 03 -s COM3 -f lib.bin
 ```
-
-**[`read_all.cmd`](Programmer/read_all.cmd)** — Windows batch file that reads `nvram.bin`, `lib.bin`, `app.bin`, and `boot.bin`.
-
-**[`write_all.cmd`](Programmer/write_all.cmd)** — Windows batch file that writes `nvram.bin`, `lib.bin`, and `app.bin` (not `boot.bin`). Both batch files use `COM3`; edit the port in the files as needed.
-
-Run from the `Programmer` folder:
-
-```bat
-cd Programmer
-read_all.cmd
-write_all.cmd
-```
-
 
 ## License and copyright
 
