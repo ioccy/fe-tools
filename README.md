@@ -6,9 +6,9 @@ The repository brings together a browser-based serial dashboard, Python utilitie
 
 ## [Dashboard](Dashboard/) and [Reference](Reference/)
 
-**[`fe-dashboard.html`](Dashboard/fe-dashboard.html)** — a self-contained, offline dashboard that communicates over the browser's **Web Serial API** to read device information and measurements, adjust frequency and modify device settings.
+**[`fe-dashboard.html`](https://ioccy.github.io/fe-tools/Dashboard/fe-dashboard.html)** — a self-contained, offline dashboard that communicates over the browser's **Web Serial API** to read device information and measurements, adjust frequency and modify device settings.
 
-**[`DDS60_4_1_Technical_Reference.html`](Reference/DDS60_4_1_Technical_Reference.html)** — a self-contained, offline technical reference. Provides commands catalog, NVRAM map, configuration and math reference.
+**[`DDS60_4_1_Technical_Reference.html`](https://ioccy.github.io/fe-tools/Reference/DDS60_4_1_Technical_Reference.html)** — a self-contained, offline technical reference. Provides commands catalog, NVRAM map, configuration and math reference.
 
 ## [Firmware](Firmware/)
 
