@@ -228,7 +228,7 @@
 #settingsPage .backup-buttons{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-start}
 #settingsPage .action-btn{height:43px;min-width:146px;font-size:13px;font-weight:730;padding:0 18px}
 #settingsPage .card-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:14px;align-items:stretch}
-#settingsPage .left-stack{display:grid;grid-template-rows:auto 1fr;gap:14px;min-width:0;min-height:0}
+#settingsPage .left-stack{display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:14px;min-width:0;min-height:0}
 #settingsPage .field-row{display:grid;grid-template-columns:minmax(130px,1fr) minmax(0,1.12fr);align-items:center;gap:16px;padding:9px 0;border-bottom:1px solid var(--line2);min-height:56px}
 #settingsPage .field-row:last-child{border-bottom:0}
 #settingsPage .field-label{color:var(--muted);font-size:12px;font-weight:590;line-height:1.35;margin-bottom:0}
@@ -489,6 +489,12 @@
             <div class="validation-feedback" id="miscFeedback" role="alert" hidden></div>
             <div class="block-actions"><button class="action-btn primary" type="button" data-validate="misc">Save</button></div>
           </section>
+          <section class="surface section-card settings-card" aria-labelledby="cpldTitle">
+            <div class="block-title" id="cpldTitle">CPLD Configuration</div><div class="block-rule"></div>
+            <div class="field-row"><label class="field-label" for="cpldPortB">Port B</label><div class="input-wrap"><input id="cpldPortB" class="field-input mono" type="text" placeholder="0x00" spellcheck="false" autocomplete="off" maxlength="4"></div></div>
+            <div class="validation-feedback" id="cpldFeedback" role="alert" hidden></div>
+            <div class="block-actions"><button class="action-btn primary" type="button" data-validate="cpld">Save</button></div>
+          </section>
           </div>
           <section class="surface section-card calibration-card" aria-labelledby="calibrationTitle">
           <div class="block-title" id="calibrationTitle">Calibration</div><div class="block-rule"></div>
@@ -530,7 +536,7 @@
         <div class="about-rule"></div>
         <div class="about-product" id="aboutProduct"></div>
         <div class="about-row"><span class="about-label">Version</span><span class="about-value">1.0</span></div>
-        <div class="about-row"><span class="about-label">Build</span><time class="about-value" datetime="2026-11-18T16:43:38Z">2026-11-18 16:43:38 GMT</time></div>
+        <div class="about-row"><span class="about-label">Build</span><time class="about-value" datetime="2026-11-27T09:05:09Z">2026-11-27 09:05:09 GMT</time></div>
         <div class="about-row"><span class="about-label">GitHub</span><a class="about-value" href="https://github.com/ioccy/rfs-tools" target="_blank" rel="noopener noreferrer">https://github.com/ioccy/rfs-tools</a></div>
         <div class="about-row about-ack-row"><span class="about-value" id="aiAcknowledgement">Application development assisted by OpenAI GPT-6.</span></div>
       </div>
@@ -915,7 +921,8 @@
     })();
     return session.closeTask;
   }
-  // Count consecutive failed UART commands per connection.
+  // Count consecutive failed UART commands per connection. Normal version
+  // Connection-readiness timeouts are excluded from normal failure tracking.
   function noteCommandSuccess(session){
     if(session===currentSession&&!session.closing)
       session.consecutiveCommandFailures=0;
@@ -1015,10 +1022,10 @@
     entry.result=result;entry.response=response?Uint8Array.from(response):null;entry.error=error;
     if(activePage==='log')renderCommandHistory();
   }
-  function beginPrivateOperationHistory(name){
+  function beginPrivateOperationHistory(name,kind='NVRAM'){
     privateOperationHistory=true;
     commandHistory.push({time:new Date().toLocaleTimeString('en-GB',{hour12:false}),
-      command:'—',kind:'NVRAM',label:name,result:'Invoked',request:null,response:null,error:''});
+      command:'—',kind,label:name,result:'Invoked',request:null,response:null,error:''});
     if(commandHistory.length>COMMAND_HISTORY_LIMIT)commandHistory.shift();
     if(activePage==='log')renderCommandHistory();
   }
@@ -1390,15 +1397,14 @@
     let xMin=Math.min(...xs),xMax=Math.max(...xs);
     const activeY=activePoint?activePoint.correctionHz*1000:null;
     const peak=Math.max(0,...ys.map(Math.abs),...(activeY===null?[]:[Math.abs(activeY)]));
-    // Grid lines every 25 mHz, with one extra grid step beyond the data.
+    // Exactly 25 mHz between adjacent ticks, with one extra tick beyond the data.
     const tickStep=25, halfTicks=Math.max(1,Math.ceil(peak/tickStep)+1);
     const yMin=-halfTicks*tickStep,yMax=halfTicks*tickStep;
     if(activePoint){xMin=Math.min(xMin,activePoint.sensorNumeric);xMax=Math.max(xMax,activePoint.sensorNumeric);}
     if(xMax===xMin){xMin-=1;xMax+=1;}else{const pad=(xMax-xMin)*.08;xMin-=pad;xMax+=pad;}
-    // Keep 25 mHz grid lines but label the vertical axis in 50 mHz steps.
-    // At extreme ranges, skip labels in multiples of 50 mHz to avoid overlap.
+    // Allow enough left margin for the widest displayed mHz tick label.
     const tickSpacing=(H-T-B)/(halfTicks*2);
-    const labelStride=2*Math.max(1,Math.ceil(20/(2*tickSpacing)));
+    const labelStride=Math.max(2,2*Math.ceil(20/(2*tickSpacing)));
     const labelTicks=[];
     for(let k=-Math.floor(halfTicks/labelStride)*labelStride;k<=halfTicks;k+=labelStride)labelTicks.push(k);
     const labelW=t=>[...t].reduce((a,c)=>a+(c>='0'&&c<='9'?6.2:c==='-'?3.8:3.2),0);
@@ -1420,12 +1426,12 @@
     const ticks=[];for(let v=Math.ceil(xMin/step)*step;v<=xMax;v+=step)ticks.push(v);
     const lastLabeled=ticks.filter(v=>v!==0).pop();
     const xAxis=ticks.length
-      ?ticks.map(v=>{const x=toX(v).toFixed(2);return `<line x1="${x}" y1="${H-B}" x2="${x}" y2="${H-B+5}" stroke="#425675" stroke-width="1"/>`+(v===0?'':`<text x="${x}" y="${H-11}" fill="#8da3bb" text-anchor="${v===lastLabeled&&toX(v)>W-24?'end':'middle'}" font-size="10">${v}${v===lastLabeled?' '+unit:''}</text>`);}).join('')
+      ?ticks.map(v=>{const x=toX(v).toFixed(2);return `<line x1="${x}" y1="${H-B}" x2="${x}" y2="${H-B+5}" stroke="#425675"/>`+(v===0?'':`<text x="${x}" y="${H-11}" fill="#8da3bb" text-anchor="${v===lastLabeled&&toX(v)>W-24?'end':'middle'}" font-size="10">${v}${v===lastLabeled?' '+unit:''}</text>`);}).join('')
       :`<text x="${L}" y="${H-11}" fill="#8da3bb" font-size="10">${escapeHtml(fmtNumber(xMin,tempMode?1:0))}</text><text x="${W-R}" y="${H-11}" fill="#8da3bb" text-anchor="end" font-size="10">${escapeHtml(fmtNumber(xMax,tempMode?1:0))} ${unit}</text>`;
     box.innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Calibration curve in millihertz for ${points.length} points">
       <defs><linearGradient id="curveFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#69e8d9" stop-opacity=".23"/><stop offset="100%" stop-color="#69e8d9" stop-opacity="0"/></linearGradient></defs>
       ${yGrid}${yLabels}
-      <line x1="${L}" y1="${H-B}" x2="${W-R}" y2="${H-B}" stroke="#425675" stroke-width="1"/>
+      <line x1="${L}" y1="${H-B}" x2="${W-R}" y2="${H-B}" stroke="#425675"/>
       ${xAxis}
       ${points.length>1?`<polygon points="${toX(points[0].sensorNumeric).toFixed(2)},${zeroY.toFixed(2)} ${ordered} ${toX(points[points.length-1].sensorNumeric).toFixed(2)},${zeroY.toFixed(2)}" fill="url(#curveFill)"/>`:''}
       <line x1="${L}" y1="${zeroY.toFixed(2)}" x2="${W-R}" y2="${zeroY.toFixed(2)}" stroke="#88acff" stroke-width="1"/>
@@ -1982,7 +1988,7 @@
       field.classList.remove('device-value','empty-value');clearError(field);
     }
     function clearAllFields(){
-      for(const id of ['ddsBaseHigh','ddsBaseLow','offsetDivisor',...Array.from({length:5},(_,i)=>`userText${i+1}`)])clearField(id);
+      for(const id of ['ddsBaseHigh','ddsBaseLow','offsetDivisor','cpldPortB',...Array.from({length:5},(_,i)=>`userText${i+1}`)])clearField(id);
       for(const tr of $('calibrationRows').rows)for(const field of tr.querySelectorAll('input')){
         field.value='';field.placeholder='Not loaded';field.classList.remove('device-value','empty-value');clearError(field);
       }
@@ -1990,7 +1996,7 @@
       setSwitch('calEnabledSwitch','calEnabledStatus',null);
       setSwitch('calAverageSwitch','calAverageStatus',null);
       setSource(null);
-      ['ddsFeedback','miscFeedback','calibrationFeedback'].forEach(clearFeedback);
+      ['ddsFeedback','miscFeedback','calibrationFeedback','cpldFeedback'].forEach(clearFeedback);
     }
     function showDeviceValue(field,value){
       field.value=value;field.placeholder='';
@@ -2069,6 +2075,10 @@
           }
         }
       }
+      if(!only||only==='cpld'){
+        const field=$('cpldPortB');
+        showLoaded(0x47,[field],cfg=>showDeviceValue(field,hexN(cpldPortBValue(cfg[0],cfg[1]),2)));
+      }
       if(!only||only==='misc'){
         USER_TEXT.forEach(([command],i)=>{
           const field=$(`userText${i+1}`);
@@ -2098,22 +2108,6 @@
       }
       return data;
     }
-    // Firmware-informed logical reconstruction from the 0x67 payload
-    // [slot, count low, count high]. The initializer zeros only slots 0–23;
-    // untouched slots 24–39 are assumed erased. Completed slots are FFFF.
-    // This models a normal first pass, not a byte-exact physical EEPROM read.
-    function counterRecordFromUart67(data){
-      if(!(data instanceof Uint8Array)||data.length!==3)
-        throw Error('Operating counter must contain three bytes');
-      const [slot,low,high]=data;
-      if(slot>=40)return null; // Unknown state: leave the whole record erased.
-      const record=new Uint8Array(82).fill(0xFF);
-      record[0]=0x7A;record[1]=slot;
-      record.fill(0,2,50); // Initializer zeros slots 0–23 only.
-      record.fill(0xFF,2,2+slot*2); // Earlier completed slots saturated.
-      record.set([high,low],2+slot*2); // EEPROM order is big-endian.
-      return record;
-    }
     function constructNvramImage(values){
       const image=new Uint8Array(NVRAM_SIZE).fill(0xFF);
       for(const field of NVRAM_FIELDS){
@@ -2121,12 +2115,20 @@
         if(!(data instanceof Uint8Array))throw Error('Missing '+field.label+' for backup');
         const start=field.address-NVRAM_BASE;
         if(field.kind==='counter'){
-          const record=counterRecordFromUart67(data);
-          if(record)image.set(record,start);
-        }else if(field.kind==='ascii'&&data.length===1&&data[0]===0){
-          // An empty UART string is a NUL, but the logical NVRAM image uses
-          // an erased FF-filled record rather than writing a zero terminator.
-          continue;
+          const [slot,low,high]=data;
+          if(slot<40){
+            // DDS60 4.1 first-pass logical reconstruction, not raw EEPROM:
+            // the firmware initializer zeroes only slots 0–23. Completed
+            // slots remain FFFF; slots 24–39 retain their erased FF state.
+            image[start]=0x7A;
+            image[start+1]=slot;
+            image.fill(0x00,start+2,start+50);
+            for(let i=0;i<slot;i++)image.fill(0xFF,start+2+2*i,start+4+2*i);
+            image.set([high,low],start+2+2*slot);
+          }
+        }else if(field.kind==='ascii'){
+          // Empty strings correspond to erased records, not a NUL byte.
+          if(data.length>1)image.set(data,start);
         }else if(field.marker!==undefined){
           image[start]=field.marker; // inferred marker, as in reference script
           image.set(data,start+1);
@@ -2463,8 +2465,36 @@
       }else clearFeedback('calibrationFeedback');
       return !errors;
     }
-    const validators={dds:validateDDS,misc:validateMisc,calibration:validateCalibration};
-    const REQUIRED={dds:[0x22,0x3D],misc:USER_TEXT.map(([getter])=>getter),calibration:[0x47,0x65,0x57,0x59]};
+    const CPLD_SELECTOR_BY_BASE=new Map([
+      [0x00,0x00],[0x20,0x01],[0x10,0x02],[0x31,0x04],
+      [0x32,0x08],[0x34,0x10],[0x38,0x20]
+    ]);
+    function selectedPortB(){
+      const field=$('cpldPortB'),match=/^(?:0x)?([0-9a-f]{1,2})$/i.exec(field.value.trim());
+      return match?parseInt(match[1],16):null;
+    }
+    function validateCpld(){
+      const field=$('cpldPortB'),value=selectedPortB();
+      if(value===null||!CPLD_SELECTOR_BY_BASE.has(value&0x3F)){
+        markError(field,'Enter a supported hex byte, e.g. 0xB8 (DDS60 4.1)');
+        showFeedback('cpldFeedback','Unsupported Port B value. Allowed low six bits: 00, 10, 20, 31, 32, 34, 38 (hex); high bits 40 and 80 may be combined.');
+        focusError([field]);return false;
+      }
+      field.value=hexN(value,2);clearError(field);clearFeedback('cpldFeedback');
+      return true;
+    }
+    // Matches cpld-config.py --set: preserve unrelated flags, selector
+    // priority/extra bits when the effective base does not change, and clamp.
+    function targetCpldConfig(current,portB){
+      const target=Uint8Array.from(current);
+      const base=portB&0x3F;
+      const currentBase=cpldPortBValue(current[0],current[1])&0x3F;
+      if(base!==currentBase)target[1]=CPLD_SELECTOR_BY_BASE.get(base);
+      target[0]=(target[0]&~0x82)|(portB&0x80?0x02:0)|(portB&0x40?0x80:0);
+      return target;
+    }
+    const validators={dds:validateDDS,misc:validateMisc,calibration:validateCalibration,cpld:validateCpld};
+    const REQUIRED={dds:[0x22,0x3D],misc:USER_TEXT.map(([getter])=>getter),calibration:[0x47,0x65,0x57,0x59],cpld:[0x47]};
     function confirmedBaseline(block){
       const absent=REQUIRED[block].filter(command=>!(settingsResults.get(command) instanceof Uint8Array));
       if(absent.length)throw Error('Missing device readback: '+absent.map(command=>'0x'+hex2(command)).join(', ')+'. Refresh before saving.');
@@ -2539,7 +2569,28 @@
       }
       return changes;
     }
-    const savers={dds:saveDDS,misc:saveMisc,calibration:saveCalibration};
+    async function saveCpld(){
+      const value=selectedPortB();
+      let changed=0,actual=null;
+      await withSerialLock(async session=>{
+        // A fresh device read, as in cpld-config.py, avoids overwriting
+        // calibration flags/selector updated since opening Settings.
+        const current=(await readFieldRaw(0x47,session)).payload;
+        const target=targetCpldConfig(current,value);
+        if(!sameBytes(current,target)){
+          settingsWriteAttempts++; // 0x46 may reach EEPROM even if write() rejects
+          await writeFieldRaw(0x46,target,session);
+          await delay(700); // cpld-config.py --set settling interval
+          actual=(await readFieldRaw(0x47,session)).payload;
+          if(!sameBytes(actual,target))throw Error('CPLD Port B: device configuration did not match the requested value');
+          changed=1;
+        }else actual=current;
+      });
+      settingsResults.set(0x47,actual);
+      recordOk(0x47,{payload:actual});
+      return changed;
+    }
+    const savers={dds:saveDDS,misc:saveMisc,calibration:saveCalibration,cpld:saveCpld};
     async function saveBlock(block){
       if(deviceWritesBlocked){toast('Device state uncertain; reconnect before writing again.');return;}
       if(busy||!port||readError){toast('Connect and finish reading the device before saving.');return;}
@@ -2552,6 +2603,7 @@
       try{
         const written=await savers[block]();
         renderReadback(block);
+        if(block==='calibration')renderReadback('cpld');
         clearFeedback(block+'Feedback');
         if(written)await refreshDashboardOnSave();
         toast(written?`${block.toUpperCase()} saved and verified (${written} write${written===1?'':'s'}).`:`${block.toUpperCase()}: no changes to save.`);
@@ -2591,6 +2643,13 @@
     });
     $('offsetDivisor').addEventListener('input',event=>{
       event.target.classList.remove('device-value');clearError(event.target);clearFeedback('ddsFeedback');
+    });
+    $('cpldPortB').addEventListener('blur',()=>{
+      const value=selectedPortB();
+      if(value!==null)$('cpldPortB').value=hexN(value,2);
+    });
+    $('cpldPortB').addEventListener('input',event=>{
+      event.target.classList.remove('device-value');clearError(event.target);clearFeedback('cpldFeedback');
     });
     for(let i=1;i<=5;i++){
       $(`userText${i}`).addEventListener('input',event=>{
